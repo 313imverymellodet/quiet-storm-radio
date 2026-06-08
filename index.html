@@ -352,6 +352,8 @@
 
   // ===== Quiet Storm DJ — talks over breaks (idents, time of night, world news) =====
   const synth = window.speechSynthesis || null;
+  const PREMIUM = CFG.premiumVoice === true;     // ElevenLabs via /api/say (key lives server-side)
+  const VOICE_ID = CFG.elevenVoiceId || "";
   let djOn = (localStorage.getItem("qsr_dj") ?? (CFG.dj===false?"0":"1")) === "1";
   let voice=null, breakTimer=null, djStarted=false, speaking=false, duckRAF=null;
   let newsCache=[], newsIdx=0;
@@ -373,16 +375,33 @@
     duckRAF=requestAnimationFrame(step);
   }
   function setSpeaking(on){ speaking=on; $("djBtn").classList.toggle("speaking", on); }
-  function dj(text){
-    if(!djOn || !synth || !text || !tunedIn) return;
+  function startSpeak(){ setSpeaking(true); rampVolume(0.16, 600); }
+  function endSpeak(){ setSpeaking(false); rampVolume(BASE_VOL, 1000); }
+
+  // Premium voice (ElevenLabs) plays through its own audio element; music ducks under it.
+  // Falls back to the browser voice automatically if the API is down/unconfigured.
+  const djAudio = new Audio();
+  djAudio.addEventListener("playing", startSpeak);
+  djAudio.addEventListener("ended", endSpeak);
+  function speakPremium(text){
+    djAudio.src = `/api/say?text=${encodeURIComponent(text)}${VOICE_ID?`&v=${encodeURIComponent(VOICE_ID)}`:""}`;
+    return djAudio.play(); // rejects if the response isn't playable audio (503/JSON/etc.)
+  }
+  function speakBrowser(text){
+    if(!synth) return;
     try{ synth.cancel(); }catch(e){}
     const u=new SpeechSynthesisUtterance(text);
     if(voice) u.voice=voice;
-    u.lang = (voice&&voice.lang) || "en-US";
-    u.rate=0.92; u.pitch=0.8; u.volume=1;
-    u.onstart=()=>{ setSpeaking(true); rampVolume(0.16, 600); };
-    u.onend=u.onerror=()=>{ setSpeaking(false); rampVolume(BASE_VOL, 1000); };
+    u.lang=(voice&&voice.lang)||"en-US"; u.rate=0.92; u.pitch=0.8; u.volume=1;
+    u.onstart=startSpeak; u.onend=u.onerror=endSpeak;
     synth.speak(u);
+  }
+  function dj(text){
+    if(!djOn || !text || !tunedIn) return;
+    try{ synth && synth.cancel(); }catch(e){}
+    try{ djAudio.pause(); }catch(e){}
+    if(PREMIUM) speakPremium(text).catch(()=>speakBrowser(text));
+    else speakBrowser(text);
   }
 
   const hour = () => new Date().getHours();

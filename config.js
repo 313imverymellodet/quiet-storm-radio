@@ -27,5 +27,13 @@ window.STATION = {
   dj: true,             // master on/off (users can also toggle in the UI)
   breakMinutes: 7,      // how often the DJ talks over a break
   news: true,           // include world-news headlines in the breaks (needs /api/news on Vercel)
-  djVoice: ""           // optional: force a system voice by name, e.g. "Daniel" or "Google UK English Male"
+  djVoice: "",          // fallback browser voice by name, e.g. "Daniel" (used if premium is off/unavailable)
+
+  // ---- Premium DJ voice: ElevenLabs (recommended for that real radio sound) ----
+  // 1. Make an ElevenLabs account, pick/clone a voice, copy its Voice ID below.
+  // 2. In Vercel → Settings → Environment Variables, add:  ELEVENLABS_API_KEY = <your key>
+  //    (the key stays server-side and is NEVER exposed in this file)
+  // 3. Set premiumVoice: true.  It auto-falls back to the browser voice if the API is down.
+  premiumVoice: false,
+  elevenVoiceId: ""     // e.g. "21m00Tcm4TlvDq8ikWAM"
 };

@@ -57,9 +57,17 @@ A smooth spoken DJ talks over breaks — station idents, the time of night, and 
 headlines** — ducking the music while it speaks, like real radio. Listeners can toggle it with the
 **DJ** button in the corner.
 
-- Voice is the browser's built-in speech (Web Speech API) — picks a deep, smooth voice
-  (e.g. "Daniel"); no API key, no cost. Quality varies by device; for a studio-grade voice you'd
-  pre-render lines with a paid TTS (ElevenLabs/OpenAI) — easy to swap in later.
+- **Premium voice (ElevenLabs) — recommended for the real radio sound.** Everything the DJ says
+  runs through one smooth ElevenLabs voice; fixed idents get cached at the CDN (free to replay),
+  news is generated fresh. To turn it on:
+  1. Make an [ElevenLabs](https://elevenlabs.io) account, pick or **clone** a voice, copy its **Voice ID**.
+  2. In **Vercel → Settings → Environment Variables**, add `ELEVENLABS_API_KEY` = your key.
+     *(The key stays server-side in `/api/say` — it is never exposed in the browser or `config.js`.)*
+  3. In `config.js` set `premiumVoice: true` and `elevenVoiceId: "<your voice id>"`.
+  It **auto-falls back to the browser voice** if the API is ever down or unconfigured, so the
+  station never goes silent. Optional env: `ELEVENLABS_MODEL` (default `eleven_turbo_v2_5`).
+- **Free fallback voice:** the browser's built-in speech (Web Speech API) — no key, no cost, but
+  quality varies by device. Used automatically whenever premium is off/unavailable.
 - News comes from **`/api/news`**, a tiny serverless function that reads a public RSS feed
   (NPR by default) server-side — no key, no CORS. Override the feed with a `NEWS_FEED` env var in
   Vercel. News only works on the deployed site (the function doesn't run on a plain local server),
@@ -75,6 +83,7 @@ headlines** — ducking the music while it speaks, like real radio. Listeners ca
 | `index.html` | The whole station (HTML/CSS/JS, self-contained) |
 | `config.js` | **Edit this** — hosted media URLs, DJ + news settings |
 | `api/news.js` | Serverless function: world-news headlines for the DJ |
+| `api/say.js` | Serverless function: ElevenLabs TTS proxy (premium DJ voice) |
 | `.gitignore` | Keeps the big media out of git |
 | `assets/` | Local media (git-ignored; for local playback) |
 
