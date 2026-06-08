@@ -52,11 +52,29 @@ Commit + push. Vercel redeploys automatically and the station is live. 🎶
 
 ---
 
+## The Quiet Storm DJ 🎙️
+A smooth spoken DJ talks over breaks — station idents, the time of night, and **world-news
+headlines** — ducking the music while it speaks, like real radio. Listeners can toggle it with the
+**DJ** button in the corner.
+
+- Voice is the browser's built-in speech (Web Speech API) — picks a deep, smooth voice
+  (e.g. "Daniel"); no API key, no cost. Quality varies by device; for a studio-grade voice you'd
+  pre-render lines with a paid TTS (ElevenLabs/OpenAI) — easy to swap in later.
+- News comes from **`/api/news`**, a tiny serverless function that reads a public RSS feed
+  (NPR by default) server-side — no key, no CORS. Override the feed with a `NEWS_FEED` env var in
+  Vercel. News only works on the deployed site (the function doesn't run on a plain local server),
+  and the DJ gracefully skips news if it's unavailable.
+- Tune it in `config.js`: `dj`, `breakMinutes`, `news`, `djVoice`.
+
+> Music is **curated only** — there's no way for listeners to add their own tracks. Set the
+> playlist in `config.js` (`mixUrl` or a `mixes` array).
+
 ## Files
 | File | Purpose |
 |------|---------|
 | `index.html` | The whole station (HTML/CSS/JS, self-contained) |
-| `config.js` | **Edit this** — your hosted video + mix URLs |
+| `config.js` | **Edit this** — hosted media URLs, DJ + news settings |
+| `api/news.js` | Serverless function: world-news headlines for the DJ |
 | `.gitignore` | Keeps the big media out of git |
 | `assets/` | Local media (git-ignored; for local playback) |
 

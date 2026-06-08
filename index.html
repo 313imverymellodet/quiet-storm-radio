@@ -68,7 +68,6 @@
     6%{opacity:.95}
     24%{transform:translateX(125vw) skewX(-9deg);opacity:0}
     100%{transform:translateX(125vw) skewX(-9deg);opacity:0}}
-  @media(prefers-reduced-motion:reduce){.sweep{display:none}.dash{animation:none}}
 
   /* ===== Idle cinema mode ===== */
   .top,.freq,.call,.sub,.tag,.playWrap{transition:opacity .55s ease}
@@ -94,6 +93,16 @@
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
   .clock{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px;letter-spacing:.24em;
     background:rgba(12,8,5,.3);backdrop-filter:blur(6px);padding:7px 12px;border-radius:3px}
+  .top-right{display:flex;align-items:center;gap:12px}
+  .djbtn{display:inline-flex;align-items:center;gap:7px;cursor:pointer;
+    font-size:11px;letter-spacing:.26em;text-transform:uppercase;font-family:var(--sans);
+    color:var(--gold);border:1px solid rgba(243,200,122,.4);background:rgba(20,14,8,.32);
+    backdrop-filter:blur(6px);padding:7px 11px;border-radius:3px;transition:opacity .2s,color .2s,border-color .2s}
+  .djbtn svg{width:14px;height:14px}
+  .djbtn:hover{border-color:rgba(243,200,122,.7)}
+  .djbtn.off{color:#8a7c66;border-color:rgba(150,130,100,.28);position:relative}
+  .djbtn.off::after{content:"";position:absolute;left:8px;right:8px;top:50%;height:1px;background:#8a7c66;transform:rotate(-12deg)}
+  .djbtn.speaking{color:var(--neon);border-color:rgba(255,57,79,.55);text-shadow:0 0 10px rgba(255,57,79,.5)}
 
   /* ===== Center hero ===== */
   .stage{position:fixed;inset:0;z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -145,28 +154,45 @@
     cursor:pointer;box-shadow:0 14px 36px rgba(200,90,58,.4);transition:transform .12s}
   .go:hover{transform:translateY(-2px)}
 
-  .dropping::after{content:"Drop a mix to play it";position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;
-    font-size:20px;letter-spacing:.16em;text-transform:uppercase;background:rgba(200,90,58,.22);backdrop-filter:blur(4px);
-    border:2px dashed rgba(243,200,122,.7);color:var(--cream)}
   .hidden{display:none!important}
+
+  /* don't clip on short / landscape-phone screens */
+  @media (max-height:430px){
+    body{overflow-y:auto}
+    .stage{position:absolute;min-height:100%;justify-content:center;padding:54px 24px 30px}
+    .call{font-size:clamp(40px,11vw,64px)}
+    .playWrap{margin-top:24px}
+    .viz{height:80px}
+  }
+  /* respect reduced-motion across all the ambient animations */
+  @media (prefers-reduced-motion:reduce){
+    .sweep{display:none}
+    .dash,.grain,.play::after,.tunein .ring,.badge .dot{animation:none}
+  }
 </style>
 </head>
 <body>
-  <div class="bg">
-    <video id="bgvid" autoplay muted loop playsinline preload="auto"></video>
+  <div class="bg" aria-hidden="true">
+    <video id="bgvid" autoplay muted loop playsinline preload="auto" tabindex="-1"></video>
   </div>
-  <div class="haze"></div>
-  <div class="cabin"></div>
-  <div class="dash"></div>
-  <div class="sweep a"></div>
-  <div class="sweep b"></div>
-  <div class="sweep c"></div>
-  <div class="grain"></div>
-  <div class="cinema-clock" id="cinemaClock">--:--</div>
+  <div class="haze" aria-hidden="true"></div>
+  <div class="cabin" aria-hidden="true"></div>
+  <div class="dash" aria-hidden="true"></div>
+  <div class="sweep a" aria-hidden="true"></div>
+  <div class="sweep b" aria-hidden="true"></div>
+  <div class="sweep c" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="cinema-clock" id="cinemaClock" aria-hidden="true">--:--</div>
 
   <div class="top">
     <div id="badge" class="badge off"><span class="dot"></span><span id="badgeText">Off Air</span></div>
-    <div class="clock" id="clock">--:--</div>
+    <div class="top-right">
+      <button id="djBtn" class="djbtn" aria-label="Toggle DJ voice" title="DJ voice">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
+        <span>DJ</span>
+      </button>
+      <div class="clock" id="clock">--:--</div>
+    </div>
   </div>
 
   <canvas class="viz" id="viz"></canvas>
@@ -178,8 +204,8 @@
     <div class="tag">90s &amp; 2000s Slow Jams · All Night Long</div>
 
     <div class="playWrap">
-      <button class="play" id="playBtn" title="Play / Pause">
-        <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      <button class="play" id="playBtn" title="Play / Pause" aria-label="Play or pause" aria-pressed="false">
+        <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
       </button>
       <div class="nowline" id="nowline">Tap play to tune in</div>
     </div>
@@ -194,73 +220,69 @@
     </div>
   </div>
 
-  <input type="file" id="file" accept="audio/*" multiple class="hidden" />
-
 <script src="config.js"></script>
 <script>
 (() => {
   "use strict";
   const EPOCH = Date.UTC(2024, 0, 1, 0, 0, 0);
   const $ = id => document.getElementById(id);
-  const audio = new Audio();
-  audio.preload = "auto"; audio.crossOrigin = "anonymous"; audio.volume = 0.9;
+  const isIOS = /iP(hone|ad|od)/.test(navigator.platform) ||
+                (/Mac/.test(navigator.userAgent) && "ontouchend" in document);
 
-  // Media URLs come from config.js (edit that file to point at your hosted media).
-  // Falls back to the local assets/ files so it still works on your own machine / TV.
   const CFG = window.STATION || {};
   const VIDEO_URL = CFG.videoUrl || "assets/detroit-nights-web.mp4";
-  const MIX_URL   = CFG.mixUrl   || "assets/quiet-storm-vol1.mp3";
+  const BASE_VOL = 0.9;
 
-  // Default station mix — auto-loaded so the play button just works.
-  const DEFAULT = { url:MIX_URL,
-    title:(CFG.mixTitle || "Quiet Storm Slow Jams, Vol. 1"),
-    artist:(CFG.mixArtist || "Joe · Silk · Usher · Maxwell · Xscape") };
+  const audio = new Audio();
+  audio.preload = "auto"; audio.crossOrigin = "anonymous"; audio.volume = BASE_VOL;
 
-  let tracks = [], schedule = [], total = 0, current = -1, live = false;
+  // ---- Curated tracks only (no user uploads). config.mixes overrides the single mix. ----
+  const TRACKS = (Array.isArray(CFG.mixes) && CFG.mixes.length ? CFG.mixes : [{
+    url:   CFG.mixUrl   || "assets/quiet-storm-vol1.mp3",
+    title: CFG.mixTitle || "Quiet Storm Slow Jams, Vol. 1",
+    artist:CFG.mixArtist|| "Joe · Silk · Usher · Maxwell · Xscape"
+  }]).map(t => ({ ...t }));
 
-  const fmt = s => { if(!isFinite(s)||s<0)s=0; s=Math.floor(s); const m=Math.floor(s/60), ss=String(s%60).padStart(2,"0"); return `${m}:${ss}`; };
-  const parseName = name => {
-    let n = name.replace(/\.[a-z0-9]+$/i,"").replace(/_/g," ").trim().replace(/^\s*\d{1,2}\s*[-.]\s*/,"");
-    const p = n.split(/\s+-\s+/);
-    return p.length>=2 ? { artist:p[0].trim(), title:p.slice(1).join(" - ").trim() } : { artist:"", title:n };
-  };
+  let schedule = [], total = 0, current = -1, live = false, tunedIn = false;
+
   function probeDuration(url){
     return new Promise(res => { const a=new Audio(); a.preload="metadata";
       a.onloadedmetadata=()=>res(isFinite(a.duration)?a.duration:1800); a.onerror=()=>res(1800); a.src=url; });
   }
-  function buildSchedule(){ schedule=[]; total=0; for(const t of tracks){ schedule.push(total); total+=(t.duration||1800); } }
+  function buildSchedule(){ schedule=[]; total=0; for(const t of TRACKS){ schedule.push(total); total+=(t.duration||1800); } }
   function livePosition(){
     if(!total) return {index:0,offset:0};
     const elapsed=((Date.now()-EPOCH)/1000)%total;
     let idx=0; for(let i=0;i<schedule.length;i++){ if(elapsed>=schedule[i])idx=i; else break; }
     return { index:idx, offset:elapsed-schedule[idx] };
   }
-  function goLive(){ live=true; tunedIn=true; resetIdle?.(); if(!tracks.length)return; const {index,offset}=livePosition(); playTrack(index,offset); }
+  function goLive(){ live=true; tunedIn=true; resetIdle(); if(!total)return; const {index,offset}=livePosition(); playTrack(index,offset); }
+
   function playTrack(index, offset=0){
-    if(!tracks.length)return;
-    current=((index%tracks.length)+tracks.length)%tracks.length;
-    const t=tracks[current]; audio.src=t.url; audio.currentTime=0;
-    const start=()=>{ try{ if(offset>0&&offset<(t.duration||1e9)) audio.currentTime=offset; }catch(e){}
-      audio.play().catch(()=>{}); audio.removeEventListener("loadedmetadata",start); };
-    audio.addEventListener("loadedmetadata", start);
+    if(!TRACKS.length) return;
+    current=((index%TRACKS.length)+TRACKS.length)%TRACKS.length;
+    const t=TRACKS[current];
+    const startAt=()=>{ try{ if(offset>0 && offset<(t.duration||1e9)) audio.currentTime=offset; }catch(e){} audio.play().catch(()=>{}); };
+    if(audio.src !== t.url){            // fix #5: only reassign src when it actually changes (no needless re-download on loop)
+      audio.src=t.url;
+      const onMeta=()=>{ audio.removeEventListener("loadedmetadata",onMeta); startAt(); };
+      audio.addEventListener("loadedmetadata", onMeta);
+    } else { startAt(); }
     renderNow();
   }
-  function next(){ if(live){ const {index,offset}=livePosition(); playTrack(index,offset); } else playTrack(current+1,0); }
+  function next(){ const {index,offset}=livePosition(); playTrack(index,offset); }
 
-  async function loadTrack(obj){
-    const duration = obj.duration || await probeDuration(obj.url);
-    tracks.push({ url:obj.url, title:obj.title, artist:obj.artist, duration });
-    buildSchedule();
+  // fix #2: recover from stream errors / stalls instead of going silent forever
+  let retryT=null;
+  function recover(){
+    if(!tunedIn) return;
+    clearTimeout(retryT);
+    retryT=setTimeout(()=>{ const {index,offset}=livePosition(); try{ audio.load(); }catch(e){}
+      try{ if(offset>0) audio.currentTime=offset; }catch(e){} audio.play().catch(()=>{}); }, 4000);
   }
-  async function addFiles(fileList){
-    const incoming=[...fileList].filter(f=>f.type.startsWith("audio/")||/\.(mp3|m4a|aac|ogg|wav|flac)$/i.test(f.name));
-    if(!incoming.length)return;
-    tracks=[]; // a dropped mix replaces the station
-    for(const f of incoming){ const m=parseName(f.name); await loadTrack({ url:URL.createObjectURL(f), title:m.title, artist:m.artist }); }
-    goLive();
-  }
-
   audio.addEventListener("ended", next);
+  audio.addEventListener("error", recover);
+  audio.addEventListener("stalled", recover);
   audio.addEventListener("play", ()=>setPlaying(true));
   audio.addEventListener("pause", ()=>setPlaying(false));
 
@@ -268,42 +290,58 @@
     $("playIcon").innerHTML = p ? '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>' : '<path d="M8 5v14l11-7z"/>';
     $("badge").classList.toggle("off", !p);
     $("badgeText").textContent = p ? "On Air" : "Off Air";
-    startViz(p);
+    $("playBtn").setAttribute("aria-pressed", p ? "true" : "false");
+    if(p) startViz(); else stopViz();   // fix #3: stop the rAF loop when not playing
   }
   function renderNow(){
-    const t=tracks[current]; if(!t)return;
+    const t=TRACKS[current]; if(!t)return;
     $("nowline").innerHTML = `● Live · <b>${esc(t.title)}</b>${t.artist?" — "+esc(t.artist):""}`;
     document.title = `▶ ${t.title} · WJLB FM 98`;
   }
   const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
-  // visualizer (subtle, bottom)
-  let ctx, analyser, srcNode, dataArr, rafId;
+  // ===== Visualizer — fix #1: never let WebAudio gate the audio on iOS =====
+  let ctx, analyser, dataArr, rafId=null, useWA=!isIOS;
   const canvas=$("viz"), cctx=canvas.getContext("2d");
-  function fitCanvas(){ canvas.width=window.innerWidth*devicePixelRatio; canvas.height=120*devicePixelRatio; }
+  function fitCanvas(){ canvas.width=Math.max(1,window.innerWidth*devicePixelRatio); canvas.height=120*devicePixelRatio; }
   window.addEventListener("resize", fitCanvas);
   function ensureAnalyser(){
-    if(ctx)return;
-    try{ ctx=new (window.AudioContext||window.webkitAudioContext)(); srcNode=ctx.createMediaElementSource(audio);
-      analyser=ctx.createAnalyser(); analyser.fftSize=256; srcNode.connect(analyser); analyser.connect(ctx.destination);
-      dataArr=new Uint8Array(analyser.frequencyBinCount); }catch(e){}
+    if(ctx || !useWA) return;
+    try{
+      ctx=new (window.AudioContext||window.webkitAudioContext)();
+      const src=ctx.createMediaElementSource(audio);
+      analyser=ctx.createAnalyser(); analyser.fftSize=256;
+      src.connect(analyser); analyser.connect(ctx.destination);
+      dataArr=new Uint8Array(analyser.frequencyBinCount);
+    }catch(e){ useWA=false; ctx=null; analyser=null; }  // fall back to a synthetic visual; audio keeps playing
   }
-  function startViz(on){ fitCanvas(); if(on){ ensureAnalyser(); if(ctx&&ctx.state==="suspended")ctx.resume(); if(!rafId)drawViz(); } }
+  function startViz(){ fitCanvas(); ensureAnalyser(); if(ctx&&ctx.state==="suspended")ctx.resume(); if(!rafId) drawViz(); }
+  function stopViz(){ if(rafId){ cancelAnimationFrame(rafId); rafId=null; } if(cctx) cctx.clearRect(0,0,canvas.width,canvas.height); }
   function drawViz(){
     rafId=requestAnimationFrame(drawViz);
     const W=canvas.width,H=canvas.height; cctx.clearRect(0,0,W,H);
-    if(!analyser)return; analyser.getByteFrequencyData(dataArr);
-    const n=Math.min(dataArr.length,72), bw=W/n;
-    for(let i=0;i<n;i++){ const v=dataArr[i]/255, h=Math.max(2*devicePixelRatio,v*H*0.9), x=i*bw;
+    if(analyser) analyser.getByteFrequencyData(dataArr);
+    const n=72, bw=W/n, tms=performance.now()/600;
+    for(let i=0;i<n;i++){
+      const v = analyser ? dataArr[i]/255
+                         : Math.max(0,(Math.sin(i*0.5+tms)+Math.sin(i*0.13+tms*1.7))*0.16+0.28);
+      const h=Math.max(2*devicePixelRatio, v*H*0.9), x=i*bw;
       const g=cctx.createLinearGradient(0,H,0,H-h);
-      g.addColorStop(0,"rgba(200,90,58,.0)"); g.addColorStop(.5,"rgba(200,90,58,.5)"); g.addColorStop(1,"#f3c87a");
-      cctx.fillStyle=g; cctx.fillRect(x+bw*0.2, H-h, bw*0.6, h); }
+      g.addColorStop(0,"rgba(200,90,58,0)"); g.addColorStop(.5,"rgba(200,90,58,.5)"); g.addColorStop(1,"#f3c87a");
+      cctx.fillStyle=g; cctx.fillRect(x+bw*0.2, H-h, bw*0.6, h);
+    }
   }
+  // fix #1/#3: pause the loop when hidden, resume + un-suspend when visible
+  document.addEventListener("visibilitychange", ()=>{
+    if(document.hidden){ stopViz(); }
+    else if(!audio.paused){ if(ctx&&ctx.state==="suspended")ctx.resume(); startViz(); }
+  });
 
+  // ===== Clock =====
   setInterval(()=>{ const t=new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}); $("clock").textContent=t; $("cinemaClock").textContent=t; }, 1000);
 
-  // ===== Idle cinema mode: after a quiet stretch, fade the UI to just the drive =====
-  let idleTimer=null, tunedIn=false;
+  // ===== Idle cinema mode =====
+  let idleTimer=null;
   const IDLE_MS=10000;
   function resetIdle(){
     document.body.classList.remove("idle");
@@ -312,24 +350,101 @@
   }
   ["mousemove","mousedown","touchstart","keydown","wheel"].forEach(ev=>window.addEventListener(ev, resetIdle, {passive:true}));
 
+  // ===== Quiet Storm DJ — talks over breaks (idents, time of night, world news) =====
+  const synth = window.speechSynthesis || null;
+  let djOn = (localStorage.getItem("qsr_dj") ?? (CFG.dj===false?"0":"1")) === "1";
+  let voice=null, breakTimer=null, djStarted=false, speaking=false, duckRAF=null;
+  let newsCache=[], newsIdx=0;
+  const NEWS_ON = CFG.news !== false;
+
+  function pickVoice(){
+    if(!synth) return null;
+    const vs=synth.getVoices(); if(!vs.length) return null;
+    const wish=[CFG.djVoice, "Google UK English Male","Daniel","Arthur","Microsoft Guy Online (Natural)","Aaron","Microsoft David","Alex","Google US English","Samantha"].filter(Boolean);
+    for(const w of wish){ const m=vs.find(v=>v.name===w) || vs.find(v=>v.name.includes(w)); if(m) return m; }
+    return vs.find(v=>/^en[-_]/i.test(v.lang)) || vs[0];
+  }
+  if(synth){ voice=pickVoice(); synth.addEventListener?.("voiceschanged", ()=>{ voice=pickVoice(); }); }
+
+  function rampVolume(to, ms){
+    cancelAnimationFrame(duckRAF);
+    const from=audio.volume, start=performance.now();
+    const step=now=>{ const k=Math.min(1,(now-start)/ms); audio.volume=from+(to-from)*k; if(k<1) duckRAF=requestAnimationFrame(step); };
+    duckRAF=requestAnimationFrame(step);
+  }
+  function setSpeaking(on){ speaking=on; $("djBtn").classList.toggle("speaking", on); }
+  function dj(text){
+    if(!djOn || !synth || !text || !tunedIn) return;
+    try{ synth.cancel(); }catch(e){}
+    const u=new SpeechSynthesisUtterance(text);
+    if(voice) u.voice=voice;
+    u.lang = (voice&&voice.lang) || "en-US";
+    u.rate=0.92; u.pitch=0.8; u.volume=1;
+    u.onstart=()=>{ setSpeaking(true); rampVolume(0.16, 600); };
+    u.onend=u.onerror=()=>{ setSpeaking(false); rampVolume(BASE_VOL, 1000); };
+    synth.speak(u);
+  }
+
+  const hour = () => new Date().getHours();
+  function timeOfNight(){ const h=hour(); return h<5?"after midnight":h<12?"this morning":h<17?"this afternoon":h<21?"this evening":"tonight"; }
+  function greeting(){ const h=hour(); return h<5?"It's late":h<12?"Good morning":h<17?"Good afternoon":"Good evening"; }
+  function ident(){
+    const lines=[
+      "You're locked into the Quiet Storm. W-J-L-B, F-M ninety eight.",
+      "This is the after hours frequency. Quiet Storm, all night long.",
+      `Slow jams to keep you company ${timeOfNight()}. You're with the Quiet Storm.`,
+      "Stay smooth. WJLB, FM ninety eight. Detroit's Quiet Storm.",
+      "Dim the lights, pour something nice. The Quiet Storm rolls on."
+    ];
+    return lines[Math.floor(Math.random()*lines.length)];
+  }
+  async function getNews(){
+    if(!NEWS_ON) return [];
+    if(newsCache.length) return newsCache;
+    try{ const r=await fetch("/api/news",{cache:"no-store"}); if(r.ok){ const d=await r.json(); if(Array.isArray(d.headlines)) newsCache=d.headlines; } }catch(e){}
+    return newsCache;
+  }
+  async function newsBreak(){
+    const n=await getNews();
+    if(!n.length){ dj(ident()); return; }
+    const headline=n[newsIdx++ % n.length];
+    dj(`Here's what's happening in the world ${timeOfNight()}. ${headline}. Now, back to the music.`);
+  }
+  function doBreak(){
+    scheduleBreak();
+    if(!djOn || !tunedIn || speaking || audio.paused) return;
+    const roll = newsCache.length || NEWS_ON ? Math.random() : 1;
+    if(roll < 0.45) newsBreak(); else dj(ident());
+  }
+  function scheduleBreak(){
+    clearTimeout(breakTimer);
+    const mins=Math.max(1, CFG.breakMinutes||7);
+    breakTimer=setTimeout(doBreak, mins*60*1000);
+  }
+  function startDJ(){
+    if(djStarted) return; djStarted=true;
+    getNews();
+    // first words during the tune-in gesture help "unlock" speech on iOS/Safari
+    setTimeout(()=>dj(`${greeting()}. You're locked into the Quiet Storm — WJLB FM ninety eight, Detroit.`), 1400);
+    scheduleBreak();
+  }
+  function updateDJBtn(){ $("djBtn").classList.toggle("off", !djOn); $("djBtn").title = djOn?"DJ voice on":"DJ voice off"; }
+  $("djBtn").addEventListener("click", ()=>{
+    djOn=!djOn; localStorage.setItem("qsr_dj", djOn?"1":"0"); updateDJBtn();
+    if(!djOn){ try{ synth&&synth.cancel(); }catch(e){} clearTimeout(breakTimer); setSpeaking(false); rampVolume(BASE_VOL,400); }
+    else { if(tunedIn) startDJ(); scheduleBreak(); }
+  });
+  updateDJBtn();
+
+  // ===== Controls =====
   $("playBtn").addEventListener("click", () => {
-    if(current===-1){ goLive(); $("scrim").classList.add("hide"); return; }
+    if(!tunedIn){ $("scrim").classList.add("hide"); goLive(); startDJ(); return; }
     if(audio.paused){ if(ctx&&ctx.state==="suspended")ctx.resume(); audio.play(); } else audio.pause();
   });
-  $("file").addEventListener("change", e => { addFiles(e.target.files); e.target.value=""; $("scrim").classList.add("hide"); });
-  $("goBtn").addEventListener("click", () => { $("scrim").classList.add("hide"); goLive(); });
-
-  // drag a different mix in
-  let dragDepth=0;
-  window.addEventListener("dragenter", e=>{ e.preventDefault(); dragDepth++; document.body.classList.add("dropping"); });
-  window.addEventListener("dragover", e=>e.preventDefault());
-  window.addEventListener("dragleave", ()=>{ dragDepth--; if(dragDepth<=0)document.body.classList.remove("dropping"); });
-  window.addEventListener("drop", e=>{ e.preventDefault(); dragDepth=0; document.body.classList.remove("dropping");
-    if(e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files); });
-
+  $("goBtn").addEventListener("click", () => { $("scrim").classList.add("hide"); goLive(); startDJ(); });
   document.addEventListener("keydown", e=>{ if(e.code==="Space"){ e.preventDefault(); $("playBtn").click(); } });
 
-  // keep the night drive moving even if autoplay is blocked
+  // ===== Background night-drive video =====
   const v=$("bgvid");
   if(v){
     const killCaptions=()=>{ for(const tt of v.textTracks) tt.mode="disabled"; };
@@ -338,8 +453,8 @@
     v.play().catch(()=>{}); document.addEventListener("click", ()=>v.play().catch(()=>{}), {once:true});
   }
 
-  // auto-load the default station mix in the background so play just works
-  loadTrack(DEFAULT);
+  // ===== Boot: probe durations for the synced schedule =====
+  (async () => { for(const t of TRACKS){ t.duration = t.duration || await probeDuration(t.url); } buildSchedule(); })();
   fitCanvas();
 })();
 </script>

@@ -1,24 +1,31 @@
-/*  Quiet Storm Radio — media configuration
+/*  Quiet Storm Radio — station configuration
  *  --------------------------------------------------------------
  *  The big video + audio files are NOT stored in git (too large for
- *  GitHub/Vercel). They live on external storage. After you upload
- *  them, paste the public URLs below and commit this file.
+ *  GitHub/Vercel). They live on external storage. Paste the public
+ *  URLs below. Leave a value "" to fall back to local ./assets files.
  *
- *  Leave a value as "" (empty) to fall back to the local files in
- *  ./assets — handy for running it on your own machine or TV.
- *
- *  Where to upload (pick one, see README):
- *    • Vercel Blob   → https://vercel.com/dashboard  → Storage → Blob
- *    • Cloudinary    → https://cloudinary.com  (free tier, great for video)
+ *  Upload to: Vercel dashboard → Storage → Blob  (or Cloudinary).
  */
 window.STATION = {
-  // Paste your hosted background video URL here (mp4):
+  // Background night-drive video (mp4):
   videoUrl: "https://v2avzszmc0kiogcf.public.blob.vercel-storage.com/YTDown_YouTube_4k-Downtown-Detroit-Michigan-Night-Drive_Media_Wgf4qAeWwkI_001_1080p.mp4",
 
-  // Paste your hosted mix URL here (mp3):
-  mixUrl: "https://v2avzszmc0kiogcf.public.blob.vercel-storage.com/Quiet%20Storm%20Slow%20Jams%20Vol%201.%20%5BJoe%2C%20Silk%2C%20Usher%2C%20Maxwell%2C%20Xscape%5D.mp3",
-
-  // Optional: what the "now playing" line says
+  // ---- Curated mixes (the only music that plays — users can't add their own) ----
+  // Single mix shortcut:
+  mixUrl:   "https://v2avzszmc0kiogcf.public.blob.vercel-storage.com/Quiet%20Storm%20Slow%20Jams%20Vol%201.%20%5BJoe%2C%20Silk%2C%20Usher%2C%20Maxwell%2C%20Xscape%5D.mp3",
   mixTitle:  "Quiet Storm Slow Jams, Vol. 1",
-  mixArtist: "Joe · Silk · Usher · Maxwell · Xscape"
+  mixArtist: "Joe · Silk · Usher · Maxwell · Xscape",
+
+  // …or a curated playlist (overrides mixUrl when non-empty). They play back
+  // to back, clock-synced, looping the whole set:
+  // mixes: [
+  //   { url:"https://…/vol1.mp3", title:"Quiet Storm, Vol. 1", artist:"Joe · Silk · Usher" },
+  //   { url:"https://…/vol2.mp3", title:"Quiet Storm, Vol. 2", artist:"Sade · Maxwell · Kem" },
+  // ],
+
+  // ---- Quiet Storm DJ (spoken breaks) ----
+  dj: true,             // master on/off (users can also toggle in the UI)
+  breakMinutes: 7,      // how often the DJ talks over a break
+  news: true,           // include world-news headlines in the breaks (needs /api/news on Vercel)
+  djVoice: ""           // optional: force a system voice by name, e.g. "Daniel" or "Google UK English Male"
 };
