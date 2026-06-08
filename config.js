@@ -13,10 +13,10 @@
  */
 window.STATION = {
   // Paste your hosted background video URL here (mp4):
-  videoUrl: "",
+  videoUrl: "https://v2avzszmc0kiogcf.public.blob.vercel-storage.com/YTDown_YouTube_4k-Downtown-Detroit-Michigan-Night-Drive_Media_Wgf4qAeWwkI_001_1080p.mp4",
 
   // Paste your hosted mix URL here (mp3):
-  mixUrl: "",
+  mixUrl: "https://v2avzszmc0kiogcf.public.blob.vercel-storage.com/Quiet%20Storm%20Slow%20Jams%20Vol%201.%20%5BJoe%2C%20Silk%2C%20Usher%2C%20Maxwell%2C%20Xscape%5D.mp3",
 
   // Optional: what the "now playing" line says
   mixTitle:  "Quiet Storm Slow Jams, Vol. 1",
