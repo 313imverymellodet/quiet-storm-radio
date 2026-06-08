@@ -34,6 +34,6 @@ window.STATION = {
   // 2. In Vercel → Settings → Environment Variables, add:  ELEVENLABS_API_KEY = <your key>
   //    (the key stays server-side and is NEVER exposed in this file)
   // 3. Set premiumVoice: true.  It auto-falls back to the browser voice if the API is down.
-  premiumVoice: false,
-  elevenVoiceId: ""     // e.g. "21m00Tcm4TlvDq8ikWAM"
+  premiumVoice: true,
+  elevenVoiceId: "VgRPNZtejvTOYKn37thJ"
 };
