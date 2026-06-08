@@ -1,0 +1,16 @@
+# Large media — hosted externally (Vercel Blob / Cloudinary), referenced via config.js.
+# Too big for GitHub's 100 MB/file limit, so not committed.
+assets/*.mp4
+assets/*.mov
+assets/*.webm
+assets/*.mp3
+assets/*.m4a
+assets/*.wav
+assets/*.flac
+
+# OS / tooling
+.DS_Store
+node_modules/
+.vercel
+.claude/
+*.log
