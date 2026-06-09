@@ -28,7 +28,8 @@
   /* ===== Living background: ATL night drive (now the star) ===== */
   .bg{position:fixed;inset:0;z-index:0;overflow:hidden}
   .bg video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
-    filter:brightness(.72) saturate(1.08) contrast(1.05);transform:scale(1.04)}
+    filter:brightness(.72) saturate(1.08) contrast(1.05);transform:scale(1.04);
+    opacity:1;transition:opacity .6s ease}
   /* light vignette only — keep the footage visible */
   .bg::after{content:"";position:absolute;inset:0;
     background:
@@ -405,7 +406,8 @@
   djAudio.addEventListener("playing", startSpeak);
   djAudio.addEventListener("ended", endSpeak);
   function speakPremium(text){
-    djAudio.src = `/api/say?text=${encodeURIComponent(text)}${VOICE_ID?`&v=${encodeURIComponent(VOICE_ID)}`:""}`;
+    const vid = (CFG.showVoices && CFG.showVoices[activeShowId()]) || VOICE_ID;  // each show can have its own voice
+    djAudio.src = `/api/say?text=${encodeURIComponent(text)}${vid?`&v=${encodeURIComponent(vid)}`:""}`;
     return djAudio.play(); // rejects if the response isn't playable audio (503/JSON/etc.)
   }
   function speakBrowser(text){
@@ -591,9 +593,10 @@
   document.addEventListener("click", ()=>{ $("showsMenu").classList.add("hidden"); $("showsBtn").setAttribute("aria-expanded","false"); });
   applyShow();
 
-  // dayparting roll-over + Top of the Hour, checked periodically
+  // dayparting roll-over (show + background video) + Top of the Hour, checked periodically
   setInterval(()=>{
     if(showMode==="auto" && activeShowId()!==curShowId) applyShow();
+    applyVideo();   // swap the background drive when the daypart changes
     if(djOn && tunedIn && !audio.paused && !speaking){
       const d=new Date();
       if(d.getMinutes()===0 && d.getHours()!==lastTOH){ lastTOH=d.getHours(); topOfHour(); }
@@ -608,13 +611,26 @@
   $("goBtn").addEventListener("click", () => { $("scrim").classList.add("hide"); goLive(); startDJ(); });
   document.addEventListener("keydown", e=>{ if(e.code==="Space"){ e.preventDefault(); $("playBtn").click(); } });
 
-  // ===== Background night-drive video =====
-  const v=$("bgvid");
-  if(v){
-    const killCaptions=()=>{ for(const tt of v.textTracks) tt.mode="disabled"; };
-    killCaptions(); v.textTracks.addEventListener?.("addtrack", killCaptions); v.addEventListener("loadedmetadata", killCaptions);
-    v.src = VIDEO_URL;
-    v.play().catch(()=>{}); document.addEventListener("click", ()=>v.play().catch(()=>{}), {once:true});
+  // ===== Background drive video — switches by time of day =====
+  const bgv=$("bgvid");
+  let curVideoUrl=null;
+  function videoDaypart(h){ if(h>=5&&h<11) return "morning"; if(h>=11&&h<17) return "afternoon"; if(h>=17&&h<21) return "evening"; return "night"; }
+  function videoUrlForNow(){ const m=CFG.videos||{}; return m[videoDaypart(hour())] || CFG.videoUrl || "assets/detroit-nights-web.mp4"; }
+  function applyVideo(){
+    if(!bgv) return;
+    const url=videoUrlForNow(); if(url===curVideoUrl) return;
+    const first = curVideoUrl===null; curVideoUrl=url;
+    const load=()=>{ bgv.src=url; for(const tt of bgv.textTracks) tt.mode="disabled"; bgv.play().catch(()=>{}); };
+    if(first){ load(); }                                   // no fade on first load
+    else {                                                 // gentle crossfade on daypart change
+      bgv.style.opacity="0";
+      setTimeout(()=>{ load(); const on=()=>{ bgv.removeEventListener("loadeddata",on); bgv.style.opacity="1"; }; bgv.addEventListener("loadeddata",on); }, 600);
+    }
+  }
+  if(bgv){
+    bgv.textTracks.addEventListener?.("addtrack", ()=>{ for(const tt of bgv.textTracks) tt.mode="disabled"; });
+    applyVideo();
+    document.addEventListener("click", ()=>bgv.play().catch(()=>{}), {once:true});
   }
 
   // ===== Boot: probe durations for the synced schedule =====

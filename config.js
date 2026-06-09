@@ -7,8 +7,17 @@
  *  Upload to: Vercel dashboard → Storage → Blob  (or Cloudinary).
  */
 window.STATION = {
-  // Background night-drive video (mp4):
+  // Background drive video (mp4) — the default / fallback:
   videoUrl: "https://v2avzszmc0kiogcf.public.blob.vercel-storage.com/YTDown_YouTube_4k-Downtown-Detroit-Michigan-Night-Drive_Media_Wgf4qAeWwkI_001_1080p.mp4",
+
+  // Optional: different Detroit drive video per time of day (it crossfades on the daypart change).
+  // Any not set here falls back to videoUrl above. Hours: morning 5–11, afternoon 11–17, evening 17–21, night 21–5.
+  videos: {
+    // morning:   "https://…/detroit-morning.mp4",
+    // afternoon: "https://…/detroit-afternoon.mp4",
+    // evening:   "https://…/detroit-evening.mp4",
+    // night:     "https://…/detroit-night.mp4",
+  },
 
   // ---- Curated mixes (the only music that plays — users can't add their own) ----
   // Single mix shortcut:
@@ -36,7 +45,15 @@ window.STATION = {
   //    (the key stays server-side and is NEVER exposed in this file)
   // 3. Set premiumVoice: true.  It auto-falls back to the browser voice if the API is down.
   premiumVoice: true,
-  elevenVoiceId: "VgRPNZtejvTOYKn37thJ",
+  elevenVoiceId: "VgRPNZtejvTOYKn37thJ",   // default voice (used for any show without its own below)
+
+  // Optional: a different ElevenLabs voice per show (create/clone them in ElevenLabs,
+  // paste each Voice ID here). Any show not listed uses elevenVoiceId above.
+  showVoices: {
+    // quietstorm:  "VgRPNZtejvTOYKn37thJ",   // smooth late-night host
+    // wakeup:      "",                        // brighter morning host
+    // dedications: "",                        // intimate dedications host
+  },
 
   // ---- Shows ----
   // Three shows auto-switch by time of day (Wake-Up in the morning, Quiet Storm
