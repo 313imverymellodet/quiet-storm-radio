@@ -401,31 +401,63 @@
   function endSpeak(){ setSpeaking(false); rampVolume(BASE_VOL, 1000); }
 
   // Premium voice (ElevenLabs) plays through its own audio element; music ducks under it.
-  // Falls back to the browser voice automatically if the API is down/unconfigured.
+  // Supports multi-voice "exchanges" so co-host shows can trade lines. Falls back to the
+  // browser voice automatically if the API is down/unconfigured.
   const djAudio = new Audio();
-  djAudio.addEventListener("playing", startSpeak);
-  djAudio.addEventListener("ended", endSpeak);
-  function speakPremium(text){
-    const vid = (CFG.showVoices && CFG.showVoices[activeShowId()]) || VOICE_ID;  // each show can have its own voice
-    djAudio.src = `/api/say?text=${encodeURIComponent(text)}${vid?`&v=${encodeURIComponent(vid)}`:""}`;
-    return djAudio.play(); // rejects if the response isn't playable audio (503/JSON/etc.)
+
+  // Each show's voice(s). config.showVoices[id] can be a string (solo host) or an array
+  // of two ids (co-hosts). Falls back to elevenVoiceId.
+  function showVoiceList(id){
+    const sv = CFG.showVoices && CFG.showVoices[id];
+    let list = Array.isArray(sv) ? sv.filter(Boolean) : (typeof sv==="string" && sv ? [sv] : []);
+    if(!list.length) list = VOICE_ID ? [VOICE_ID] : [""];
+    return list;
   }
-  function speakBrowser(text){
-    if(!synth) return;
-    try{ synth.cancel(); }catch(e){}
-    const u=new SpeechSynthesisUtterance(text);
-    if(voice) u.voice=voice;
-    u.lang=(voice&&voice.lang)||"en-US"; u.rate=0.92; u.pitch=0.8; u.volume=1;
-    u.onstart=startSpeak; u.onend=u.onerror=endSpeak;
-    synth.speak(u);
+  function speakOneBrowser(text){
+    return new Promise(res=>{
+      if(!synth){ res(); return; }
+      const u=new SpeechSynthesisUtterance(text);
+      if(voice) u.voice=voice; u.lang=(voice&&voice.lang)||"en-US"; u.rate=0.92; u.pitch=0.8; u.volume=1;
+      u.onend=u.onerror=()=>res();
+      synth.speak(u);
+    });
   }
-  function dj(text){
-    if(!djOn || !text || !tunedIn) return;
+  function speakOne(text, voiceId){
+    return new Promise(res=>{
+      if(!PREMIUM){ speakOneBrowser(text).then(res); return; }
+      djAudio.onended=()=>{ djAudio.onended=djAudio.onerror=null; res(); };
+      djAudio.onerror=()=>{ djAudio.onended=djAudio.onerror=null; speakOneBrowser(text).then(res); }; // API down -> browser voice
+      djAudio.src=`/api/say?text=${encodeURIComponent(text)}${voiceId?`&v=${encodeURIComponent(voiceId)}`:""}`;
+      djAudio.play().catch(()=>{}); // a real failure fires 'error' -> fallback above
+    });
+  }
+  // Speak a sequence of {text, voiceId} segments back-to-back, ducking the music once for the whole exchange.
+  let seqToken=0;
+  async function speakSequence(segments){
+    if(!djOn || !tunedIn || !segments.length) return;
+    const my=++seqToken;
     try{ synth && synth.cancel(); }catch(e){}
     try{ djAudio.pause(); }catch(e){}
-    if(PREMIUM) speakPremium(text).catch(()=>speakBrowser(text));
-    else speakBrowser(text);
+    startSpeak();
+    for(const seg of segments){
+      if(my!==seqToken) return;            // a newer break interrupted us
+      await speakOne(seg.text, seg.voiceId);
+    }
+    if(my===seqToken) endSpeak();
   }
+  // Single host line — uses the active show's primary voice.
+  function dj(text){
+    if(!text) return;
+    const v=showVoiceList(activeShowId());
+    speakSequence([{ text, voiceId:v[0] }]);
+  }
+  // Co-host exchange — lines alternate between the show's voices.
+  function djExchange(lines){
+    if(!lines || !lines.length) return;
+    const v=showVoiceList(activeShowId());
+    speakSequence(lines.map((t,i)=>({ text:t, voiceId:v[i % v.length] })));
+  }
+  const isCoHost = id => showVoiceList(id).length >= 2;
 
   const pick = a => a[Math.floor(Math.random()*a.length)];
   const hour = () => new Date().getHours();
@@ -458,19 +490,40 @@
       "Easy does it, Detroit. Slow jams till the sun comes up on W-J-L-B.",
       "Your after hours soundtrack. Ninety eight point seven, the Quiet Storm."
     ]},
-    wakeup: { name:"The Wake-Up", idents:[
-      "Good morning, Detroit. You're up with the Wake-Up on W-J-L-B, F-M ninety eight.",
-      "Rise and shine, Motor City. Let's ease into it — slow and smooth.",
-      "Coffee's on. This is the Wake-Up, your soundtrack to a slow morning.",
-      "Take your time this morning. You're with the Wake-Up on the Quiet Storm.",
-      "A little soul to start the day. W-J-L-B — the Wake-Up.",
-      "No rush this morning. Just good music and good company. The Wake-Up rolls on."
-    ]},
-    dedications: { name:"Midnight Dedications", dedications:true, idents:[
-      "It's Midnight Dedications on W-J-L-B. This next one's for someone special.",
-      "Late night, lights low — this is Midnight Dedications on the Quiet Storm.",
-      "Send it out to the one you're thinking about. Midnight Dedications, all yours."
-    ]}
+    wakeup: { name:"The Wake-Up",
+      idents:[
+        "Good morning, Detroit. You're up with the Wake-Up on W-J-L-B, F-M ninety eight.",
+        "Rise and shine, Motor City. Let's ease into it — slow and smooth.",
+        "Coffee's on. This is the Wake-Up, your soundtrack to a slow morning.",
+        "Take your time this morning. You're with the Wake-Up on the Quiet Storm.",
+        "A little soul to start the day. W-J-L-B — the Wake-Up.",
+        "No rush this morning. Just good music and good company. The Wake-Up rolls on."
+      ],
+      // co-host banter (used when two voices are set). Lines alternate host A / host B.
+      welcome:["Good morning, Detroit — you're up with the Wake-Up.","Easing you into the day, nice and slow, on W-J-L-B, F-M ninety eight."],
+      banter:[
+        ["Good morning, Detroit. Sun's coming up over the Motor City.","And we got the smoothest way to start your morning right here."],
+        ["Coffee's on, the city's stretching its legs.","No rush though — that's not how the Wake-Up does it."],
+        ["How we feeling this morning?","Feeling good. Feeling slow. Exactly how we like it."],
+        ["A little soul to shake off the sleep.","Take your time. We're right here with you, Detroit."],
+        ["The Motor City's waking up.","And we're keeping it smooth all the way through. W-J-L-B."],
+        ["You made it to another morning.","Let's ease into it together. F-M ninety eight, the Wake-Up."]
+      ]
+    },
+    dedications: { name:"Midnight Dedications", dedications:true,
+      idents:[
+        "It's Midnight Dedications on W-J-L-B. This next one's for someone special.",
+        "Late night, lights low — this is Midnight Dedications on the Quiet Storm.",
+        "Send it out to the one you're thinking about. Midnight Dedications, all yours."
+      ],
+      welcome:["It's Midnight Dedications on the Quiet Storm.","Lights down low, Detroit — these next ones are for the ones you love."],
+      banter:[
+        ["It's Midnight Dedications on W-J-L-B.","Phones lit up, lights low — these next ones are going out to somebody special."],
+        ["Who you thinking about tonight, Detroit?","Whoever it is… send this one out to them."],
+        ["The night belongs to the lovers.","And the Quiet Storm belongs to you. Midnight Dedications, all yours."],
+        ["We'll keep you company till the sun comes up.","Slow, smooth, and close. That's the Midnight Dedications way."]
+      ]
+    }
   };
   const SHOW_ORDER = ["quietstorm","wakeup","dedications"];
   function showForHour(h){ if(h>=5 && h<11) return "wakeup"; if(h<5) return "dedications"; return "quietstorm"; }
@@ -539,12 +592,18 @@
     const headline=n[newsIdx++ % n.length];
     dj(`Here's what's happening in the world ${timeOfNight()}. ${headline}. Now, back to the slow jams.`);
   }
+  function deliverDedication(co){
+    const text=dedication();
+    if(co) djExchange(["We got a dedication coming in.", text]);
+    else dj(text);
+  }
   function doBreak(){
     scheduleBreak();
     if(!djOn || !tunedIn || speaking || audio.paused) return;
-    const show=activeShow();
-    if(show.dedications && Math.random()<0.5){ dj(dedication()); return; }
+    const id=activeShowId(), show=SHOWS[id], co=isCoHost(id);
+    if(show.dedications && Math.random()<0.5){ deliverDedication(co); return; }
     if(canReadNews() && Math.random()<0.35){ newsBreak(); return; }
+    if(co && show.banter && Math.random()<0.6){ djExchange(pick(show.banter)); return; }
     dj(Math.random()<0.5 ? timeCheck() : ident());
   }
   function scheduleBreak(){
@@ -567,7 +626,11 @@
     if(djStarted) return; djStarted=true;
     getNews();
     // first words during the tune-in gesture help "unlock" speech on iOS/Safari
-    setTimeout(()=>dj(`${greeting()}. You're locked into ${activeShow().name} — W-J-L-B, F-M ninety eight, Detroit.`), 1400);
+    setTimeout(()=>{
+      const id=activeShowId();
+      if(isCoHost(id) && SHOWS[id].welcome) djExchange(SHOWS[id].welcome);
+      else dj(`${greeting()}. You're locked into ${SHOWS[id].name} — W-J-L-B, F-M ninety eight, Detroit.`);
+    }, 1400);
     scheduleBreak();
   }
   function updateDJBtn(){ $("djBtn").classList.toggle("off", !djOn); $("djBtn").title = djOn?"DJ voice on":"DJ voice off"; }

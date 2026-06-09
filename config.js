@@ -47,12 +47,13 @@ window.STATION = {
   premiumVoice: true,
   elevenVoiceId: "VgRPNZtejvTOYKn37thJ",   // default voice (used for any show without its own below)
 
-  // Optional: a different ElevenLabs voice per show (create/clone them in ElevenLabs,
-  // paste each Voice ID here). Any show not listed uses elevenVoiceId above.
+  // Per-show ElevenLabs voices (create/clone them in ElevenLabs, paste the Voice IDs).
+  // A single id = solo host. TWO ids in an array = co-hosts who trade lines (banter).
+  // Any show not listed uses elevenVoiceId above.
   showVoices: {
-    // quietstorm:  "VgRPNZtejvTOYKn37thJ",   // smooth late-night host
-    // wakeup:      "",                        // brighter morning host
-    // dedications: "",                        // intimate dedications host
+    // quietstorm:  "VgRPNZtejvTOYKn37thJ",            // solo late-night host
+    // wakeup:      ["voiceA_morning", "voiceB_morning"],   // two morning co-hosts
+    // dedications: ["voiceA_night",   "voiceB_night"],     // two late-night co-hosts
   },
 
   // ---- Shows ----
