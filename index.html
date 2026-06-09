@@ -103,6 +103,18 @@
   .djbtn.off{color:#8a7c66;border-color:rgba(150,130,100,.28);position:relative}
   .djbtn.off::after{content:"";position:absolute;left:8px;right:8px;top:50%;height:1px;background:#8a7c66;transform:rotate(-12deg)}
   .djbtn.speaking{color:var(--neon);border-color:rgba(255,57,79,.55);text-shadow:0 0 10px rgba(255,57,79,.5)}
+  .shows-wrap{position:relative}
+  .showsbtn{color:var(--cream);max-width:46vw}
+  .showsbtn #showsLabel{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .showsbtn .caret{opacity:.7;font-size:9px;margin-left:1px}
+  .shows-menu{position:absolute;top:calc(100% + 8px);right:0;z-index:9;min-width:210px;
+    background:rgba(14,9,6,.92);border:1px solid var(--line);border-radius:8px;padding:6px;
+    backdrop-filter:blur(14px);box-shadow:0 20px 50px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:2px}
+  .shows-item{display:block;width:100%;text-align:left;cursor:pointer;font-family:var(--sans);
+    font-size:13px;letter-spacing:.04em;color:var(--ink);background:none;border:none;border-radius:5px;padding:10px 11px;
+    transition:background .15s}
+  .shows-item:hover{background:rgba(255,235,200,.07)}
+  .shows-item.on{color:var(--gold);background:rgba(243,200,122,.1);box-shadow:inset 0 0 0 1px rgba(243,200,122,.25)}
 
   /* ===== Center hero ===== */
   .stage{position:fixed;inset:0;z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -187,6 +199,14 @@
   <div class="top">
     <div id="badge" class="badge off"><span class="dot"></span><span id="badgeText">Off Air</span></div>
     <div class="top-right">
+      <div class="shows-wrap">
+        <button id="showsBtn" class="djbtn showsbtn" aria-haspopup="true" aria-expanded="false" title="Shows">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5h18v2H3V5zm0 6h12v2H3v-2zm0 6h18v2H3v-2zm14-6 5 3-5 3v-6z"/></svg>
+          <span id="showsLabel">The Quiet Storm</span>
+          <span class="caret" aria-hidden="true">▾</span>
+        </button>
+        <div id="showsMenu" class="shows-menu hidden" role="menu" aria-label="Choose a show"></div>
+      </div>
       <button id="djBtn" class="djbtn" aria-label="Toggle DJ voice" title="DJ voice">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
         <span>DJ</span>
@@ -200,7 +220,7 @@
   <div class="stage">
     <div class="freq">98.7 FM · Detroit</div>
     <div class="call">WJLB <em>FM&nbsp;98</em></div>
-    <div class="sub">Quiet Storm</div>
+    <div class="sub" id="subShow">Quiet Storm</div>
     <div class="tag">90s &amp; 2000s Slow Jams · All Night Long</div>
 
     <div class="playWrap">
@@ -411,8 +431,9 @@
   function greeting(){ const h=hour(); return h<5?"Late night":h<12?"Good morning":h<17?"Good afternoon":"Good evening"; }
   const TAGS=["Stay smooth.","Keep it locked.","All night long.","Slow it all the way down.","The vibe doesn't stop.","You're in good company."];
 
-  function ident(){
-    return pick([
+  // ===== Shows (auto-dayparting + manual override) =====
+  const SHOWS = {
+    quietstorm: { name:"The Quiet Storm", idents:[
       "You're locked into the Quiet Storm. W-J-L-B, F-M ninety eight, Detroit.",
       "This is the after hours frequency, straight out the Motor City.",
       `Slow jams to keep you company ${timeOfNight()}. You're with the Quiet Storm.`,
@@ -422,10 +443,44 @@
       "From Detroit to wherever you are tonight — stay smooth on the Quiet Storm.",
       "This one's for the lovers and the night owls. You're locked in.",
       "Stay smooth. W-J-L-B, F-M ninety eight. Detroit's Quiet Storm."
-    ]);
+    ]},
+    wakeup: { name:"The Wake-Up", idents:[
+      "Good morning, Detroit. You're up with the Wake-Up on W-J-L-B, F-M ninety eight.",
+      "Rise and shine, Motor City. Let's ease into it — slow and smooth.",
+      "Coffee's on. This is the Wake-Up, your soundtrack to a slow morning.",
+      "Take your time this morning. You're with the Wake-Up on the Quiet Storm.",
+      "A little soul to start the day. W-J-L-B — the Wake-Up.",
+      "No rush this morning. Just good music and good company. The Wake-Up rolls on."
+    ]},
+    dedications: { name:"Midnight Dedications", dedications:true, idents:[
+      "It's Midnight Dedications on W-J-L-B. This next one's for someone special.",
+      "Late night, lights low — this is Midnight Dedications on the Quiet Storm.",
+      "Send it out to the one you're thinking about. Midnight Dedications, all yours."
+    ]}
+  };
+  const SHOW_ORDER = ["quietstorm","wakeup","dedications"];
+  function showForHour(h){ if(h>=5 && h<11) return "wakeup"; if(h<5) return "dedications"; return "quietstorm"; }
+  let showMode = localStorage.getItem("qsr_show") || "auto";   // "auto" | show id
+  let curShowId = null;
+  function activeShowId(){ return showMode==="auto" ? showForHour(hour()) : (SHOWS[showMode]?showMode:"quietstorm"); }
+  function activeShow(){ return SHOWS[activeShowId()] || SHOWS.quietstorm; }
+
+  // Dedications (family-editable in config.js) — strings, or {to, from, note}
+  const DEDICATIONS = (Array.isArray(CFG.dedications) && CFG.dedications.length) ? CFG.dedications : [
+    "This next one goes out to everybody holding someone close tonight.",
+    "For the long-distance lovers — this one's for you. Stay close.",
+    {to:"the night owls", note:"keep each other warm out there"}
+  ];
+  function dedication(){
+    const d=pick(DEDICATIONS);
+    if(typeof d==="string") return d;
+    const to=d.to||"someone special", from=d.from?`, from ${d.from}`:"", note=d.note?` ${d.note}.`:"";
+    return `This next one goes out to ${to}${from}.${note} Midnight Dedications, on the Quiet Storm.`;
   }
+  function ident(){ return pick(activeShow().idents); }
+
   // live time check — "It's 2 oh 5 a.m. in the D…"
-  function timeCheck(){
+  function clockPhrase(){
     const d=new Date(); const h=d.getHours(), m=d.getMinutes();
     const ampm=h<12?"a.m.":"p.m."; const h12=(h%12)||12;
     let t;
@@ -434,8 +489,20 @@
     else if(m===0) t=`${h12} o'clock`;
     else if(m<10) t=`${h12} oh ${m} ${ampm}`;
     else t=`${h12} ${m} ${ampm}`;
-    const where = pick(["in the D","in the Motor City","across the Metro","in Detroit","here on the Quiet Storm"]);
-    return `It's ${t} ${where}. ${pick(TAGS)}`;
+    return `It's ${t} ${pick(["in the D","in the Motor City","across the Metro","in Detroit"])}`;
+  }
+  function timeCheck(){ return `${clockPhrase()}. ${pick(TAGS)}`; }
+
+  // Detroit weather (Open-Meteo — free, no key) for Top of the Hour
+  const WX={0:"clear",1:"mostly clear",2:"partly cloudy",3:"overcast",45:"foggy",48:"foggy",51:"drizzling",53:"drizzling",55:"drizzling",61:"raining",63:"raining",65:"raining hard",66:"freezing rain",67:"freezing rain",71:"snowing",73:"snowing",75:"snowing hard",77:"flurrying",80:"a few showers around",81:"showers around",82:"heavy showers",85:"snow showers",86:"snow showers",95:"storming",96:"storming",99:"storming"};
+  let weatherCache=null, weatherAt=0;
+  async function getWeather(){
+    if(weatherCache && Date.now()-weatherAt<1800000) return weatherCache;
+    try{
+      const r=await fetch("https://api.open-meteo.com/v1/forecast?latitude=42.3314&longitude=-83.0458&current=temperature_2m,weather_code&temperature_unit=fahrenheit&timezone=America/New_York",{cache:"no-store"});
+      if(r.ok){ const d=await r.json(); const t=Math.round(d.current.temperature_2m); weatherCache=`Right now in Detroit it's ${t} degrees and ${WX[d.current.weather_code]||"calm"}`; weatherAt=Date.now(); }
+    }catch(e){}
+    return weatherCache;
   }
 
   async function getNews(){
@@ -461,7 +528,9 @@
   function doBreak(){
     scheduleBreak();
     if(!djOn || !tunedIn || speaking || audio.paused) return;
-    if(canReadNews() && Math.random()<0.4){ newsBreak(); return; }
+    const show=activeShow();
+    if(show.dedications && Math.random()<0.5){ dj(dedication()); return; }
+    if(canReadNews() && Math.random()<0.35){ newsBreak(); return; }
     dj(Math.random()<0.5 ? timeCheck() : ident());
   }
   function scheduleBreak(){
@@ -469,11 +538,22 @@
     const mins=Math.max(1, CFG.breakMinutes||7);
     breakTimer=setTimeout(doBreak, mins*60*1000);
   }
+  // Top of the Hour — station ID + time + Detroit weather + a headline
+  let lastTOH=-1;
+  async function topOfHour(){
+    clearTimeout(breakTimer);
+    const parts=[`${activeShow().name} on W-J-L-B, F-M ninety eight.`, clockPhrase()+"."];
+    const w=await getWeather(); if(w) parts.push(w+".");
+    if(canReadNews()){ const n=await getNews(); if(n.length){ newsReadTimes.push(Date.now()); parts.push(`In the headlines: ${n[newsIdx++ % n.length]}.`); } }
+    parts.push("Now, back to the music.");
+    dj(parts.join(" "));
+    scheduleBreak();
+  }
   function startDJ(){
     if(djStarted) return; djStarted=true;
     getNews();
     // first words during the tune-in gesture help "unlock" speech on iOS/Safari
-    setTimeout(()=>dj(`${greeting()}. You're locked into the Quiet Storm — WJLB FM ninety eight, Detroit.`), 1400);
+    setTimeout(()=>dj(`${greeting()}. You're locked into ${activeShow().name} — W-J-L-B, F-M ninety eight, Detroit.`), 1400);
     scheduleBreak();
   }
   function updateDJBtn(){ $("djBtn").classList.toggle("off", !djOn); $("djBtn").title = djOn?"DJ voice on":"DJ voice off"; }
@@ -483,6 +563,42 @@
     else { if(tunedIn) startDJ(); scheduleBreak(); }
   });
   updateDJBtn();
+
+  // ===== Shows menu + dayparting =====
+  function applyShow(){
+    const show = SHOWS[activeShowId()];
+    $("subShow").textContent = show.name;
+    $("showsLabel").textContent = showMode==="auto" ? show.name : show.name;
+    [...$("showsMenu").children].forEach(el=>el.classList.toggle("on", el.dataset.id===showMode));
+    curShowId = activeShowId();
+  }
+  (function buildShowsMenu(){
+    const items=[["auto","Auto · by time of day"], ...SHOW_ORDER.map(id=>[id, SHOWS[id].name])];
+    $("showsMenu").innerHTML = items.map(([id,label])=>`<button class="shows-item" role="menuitemradio" data-id="${id}">${label}</button>`).join("");
+    $("showsMenu").querySelectorAll(".shows-item").forEach(b=>b.addEventListener("click",e=>{
+      e.stopPropagation();
+      showMode=b.dataset.id; localStorage.setItem("qsr_show", showMode);
+      $("showsMenu").classList.add("hidden"); $("showsBtn").setAttribute("aria-expanded","false");
+      applyShow();
+      if(tunedIn && djOn) dj(`You're now with ${SHOWS[activeShowId()].name}. ${ident()}`);
+    }));
+  })();
+  $("showsBtn").addEventListener("click", e=>{
+    e.stopPropagation();
+    const open = $("showsMenu").classList.toggle("hidden")===false;
+    $("showsBtn").setAttribute("aria-expanded", open?"true":"false");
+  });
+  document.addEventListener("click", ()=>{ $("showsMenu").classList.add("hidden"); $("showsBtn").setAttribute("aria-expanded","false"); });
+  applyShow();
+
+  // dayparting roll-over + Top of the Hour, checked periodically
+  setInterval(()=>{
+    if(showMode==="auto" && activeShowId()!==curShowId) applyShow();
+    if(djOn && tunedIn && !audio.paused && !speaking){
+      const d=new Date();
+      if(d.getMinutes()===0 && d.getHours()!==lastTOH){ lastTOH=d.getHours(); topOfHour(); }
+    }
+  }, 15000);
 
   // ===== Controls =====
   $("playBtn").addEventListener("click", () => {

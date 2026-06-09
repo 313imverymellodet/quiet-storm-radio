@@ -36,5 +36,17 @@ window.STATION = {
   //    (the key stays server-side and is NEVER exposed in this file)
   // 3. Set premiumVoice: true.  It auto-falls back to the browser voice if the API is down.
   premiumVoice: true,
-  elevenVoiceId: "VgRPNZtejvTOYKn37thJ"
+  elevenVoiceId: "VgRPNZtejvTOYKn37thJ",
+
+  // ---- Shows ----
+  // Three shows auto-switch by time of day (Wake-Up in the morning, Quiet Storm
+  // through the day/night, Midnight Dedications after midnight). Listeners can also
+  // pick one manually from the "Shows" menu in the corner.
+  //
+  // Dedications the host reads during Midnight Dedications. Plain strings, or
+  // { to, from, note } objects. Add your family's shoutouts here:
+  dedications: [
+    // { to: "Mom", from: "the whole family", note: "we love you" },
+    // "Happy anniversary to Rome and Jess — twelve years strong.",
+  ]
 };
