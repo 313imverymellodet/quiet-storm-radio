@@ -27,6 +27,7 @@ window.STATION = {
   dj: true,             // master on/off (users can also toggle in the UI)
   breakMinutes: 7,      // how often the DJ talks over a break
   news: true,           // include world-news headlines in the breaks (needs /api/news on Vercel)
+  newsPerHour: 4,       // cap: most spoken news breaks per rolling hour (protects TTS quota; 0 = no news)
   djVoice: "",          // fallback browser voice by name, e.g. "Daniel" (used if premium is off/unavailable)
 
   // ---- Premium DJ voice: ElevenLabs (recommended for that real radio sound) ----

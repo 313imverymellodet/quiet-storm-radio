@@ -356,8 +356,9 @@
   const VOICE_ID = CFG.elevenVoiceId || "";
   let djOn = (localStorage.getItem("qsr_dj") ?? (CFG.dj===false?"0":"1")) === "1";
   let voice=null, breakTimer=null, djStarted=false, speaking=false, duckRAF=null;
-  let newsCache=[], newsIdx=0;
+  let newsCache=[], newsIdx=0, newsReadTimes=[];
   const NEWS_ON = CFG.news !== false;
+  const NEWS_PER_HOUR = Math.max(0, CFG.newsPerHour ?? 4);  // cap spoken news breaks per rolling hour
 
   function pickVoice(){
     if(!synth) return null;
@@ -404,36 +405,64 @@
     else speakBrowser(text);
   }
 
+  const pick = a => a[Math.floor(Math.random()*a.length)];
   const hour = () => new Date().getHours();
   function timeOfNight(){ const h=hour(); return h<5?"after midnight":h<12?"this morning":h<17?"this afternoon":h<21?"this evening":"tonight"; }
-  function greeting(){ const h=hour(); return h<5?"It's late":h<12?"Good morning":h<17?"Good afternoon":"Good evening"; }
+  function greeting(){ const h=hour(); return h<5?"Late night":h<12?"Good morning":h<17?"Good afternoon":"Good evening"; }
+  const TAGS=["Stay smooth.","Keep it locked.","All night long.","Slow it all the way down.","The vibe doesn't stop.","You're in good company."];
+
   function ident(){
-    const lines=[
-      "You're locked into the Quiet Storm. W-J-L-B, F-M ninety eight.",
-      "This is the after hours frequency. Quiet Storm, all night long.",
+    return pick([
+      "You're locked into the Quiet Storm. W-J-L-B, F-M ninety eight, Detroit.",
+      "This is the after hours frequency, straight out the Motor City.",
       `Slow jams to keep you company ${timeOfNight()}. You're with the Quiet Storm.`,
-      "Stay smooth. WJLB, FM ninety eight. Detroit's Quiet Storm.",
-      "Dim the lights, pour something nice. The Quiet Storm rolls on."
-    ];
-    return lines[Math.floor(Math.random()*lines.length)];
+      "Dim the lights, pour something nice. The Quiet Storm rolls on.",
+      "Ninety eight point seven, W-J-L-B — the sound of the Motor City after dark.",
+      "No interruptions. Just the slow ones. Quiet Storm, all night.",
+      "From Detroit to wherever you are tonight — stay smooth on the Quiet Storm.",
+      "This one's for the lovers and the night owls. You're locked in.",
+      "Stay smooth. W-J-L-B, F-M ninety eight. Detroit's Quiet Storm."
+    ]);
   }
+  // live time check — "It's 2 oh 5 a.m. in the D…"
+  function timeCheck(){
+    const d=new Date(); const h=d.getHours(), m=d.getMinutes();
+    const ampm=h<12?"a.m.":"p.m."; const h12=(h%12)||12;
+    let t;
+    if(m===0 && h===0) t="midnight";
+    else if(m===0 && h===12) t="noon";
+    else if(m===0) t=`${h12} o'clock`;
+    else if(m<10) t=`${h12} oh ${m} ${ampm}`;
+    else t=`${h12} ${m} ${ampm}`;
+    const where = pick(["in the D","in the Motor City","across the Metro","in Detroit","here on the Quiet Storm"]);
+    return `It's ${t} ${where}. ${pick(TAGS)}`;
+  }
+
   async function getNews(){
     if(!NEWS_ON) return [];
     if(newsCache.length) return newsCache;
     try{ const r=await fetch("/api/news",{cache:"no-store"}); if(r.ok){ const d=await r.json(); if(Array.isArray(d.headlines)) newsCache=d.headlines; } }catch(e){}
     return newsCache;
   }
+  // news-rate cap — at most NEWS_PER_HOUR spoken news breaks in any rolling hour (protects TTS quota)
+  function canReadNews(){
+    if(!NEWS_ON || NEWS_PER_HOUR<=0) return false;
+    const cut=Date.now()-3600000;
+    newsReadTimes=newsReadTimes.filter(t=>t>cut);
+    return newsReadTimes.length < NEWS_PER_HOUR;
+  }
   async function newsBreak(){
     const n=await getNews();
-    if(!n.length){ dj(ident()); return; }
+    if(!n.length){ dj(Math.random()<0.5?timeCheck():ident()); return; }
+    newsReadTimes.push(Date.now());
     const headline=n[newsIdx++ % n.length];
-    dj(`Here's what's happening in the world ${timeOfNight()}. ${headline}. Now, back to the music.`);
+    dj(`Here's what's happening in the world ${timeOfNight()}. ${headline}. Now, back to the slow jams.`);
   }
   function doBreak(){
     scheduleBreak();
     if(!djOn || !tunedIn || speaking || audio.paused) return;
-    const roll = newsCache.length || NEWS_ON ? Math.random() : 1;
-    if(roll < 0.45) newsBreak(); else dj(ident());
+    if(canReadNews() && Math.random()<0.4){ newsBreak(); return; }
+    dj(Math.random()<0.5 ? timeCheck() : ident());
   }
   function scheduleBreak(){
     clearTimeout(breakTimer);
