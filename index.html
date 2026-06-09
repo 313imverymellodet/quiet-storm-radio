@@ -490,6 +490,16 @@
       "Easy does it, Detroit. Slow jams till the sun comes up on W-J-L-B.",
       "Your after hours soundtrack. Ninety eight point seven, the Quiet Storm."
     ]},
+    drivetime: { name:"Drive Time", idents:[
+      "You're rolling through the afternoon with Drive Time on W-J-L-B, F-M ninety eight.",
+      "Easy grooves for the ride. This is Drive Time on the Quiet Storm.",
+      "However the day's treating you, we got the smooth soundtrack for it. Drive Time, Detroit.",
+      "Windows down, music low. You're with Drive Time on W-J-L-B.",
+      "From the afternoon into the evening — slow it down with us. Drive Time.",
+      "Workday's winding down. Let the Motor City carry you home. F-M ninety eight.",
+      "Ninety eight point seven — your afternoon and evening soul. This is Drive Time.",
+      "No traffic can touch this vibe. Drive Time rolls on, Detroit."
+    ]},
     wakeup: { name:"The Wake-Up",
       idents:[
         "Good morning, Detroit. You're up with the Wake-Up on W-J-L-B, F-M ninety eight.",
@@ -525,8 +535,13 @@
       ]
     }
   };
-  const SHOW_ORDER = ["quietstorm","wakeup","dedications"];
-  function showForHour(h){ if(h>=5 && h<11) return "wakeup"; if(h<5) return "dedications"; return "quietstorm"; }
+  const SHOW_ORDER = ["quietstorm","drivetime","wakeup","dedications"];
+  function showForHour(h){
+    if(h<5)  return "dedications";   // 12am – 5am
+    if(h<11) return "wakeup";        // 5am – 11am
+    if(h<20) return "drivetime";     // 11am – 8pm
+    return "quietstorm";             // 8pm – 12am
+  }
   let showMode = localStorage.getItem("qsr_show") || "auto";   // "auto" | show id
   let curShowId = null;
   function activeShowId(){ return showMode==="auto" ? showForHour(hour()) : (SHOWS[showMode]?showMode:"quietstorm"); }

@@ -51,9 +51,10 @@ window.STATION = {
   // A single id = solo host. TWO ids in an array = co-hosts who trade lines (banter).
   // Any show not listed uses elevenVoiceId above.
   showVoices: {
-    // quietstorm:  "VgRPNZtejvTOYKn37thJ",            // solo late-night host
-    // wakeup:      ["voiceA_morning", "voiceB_morning"],   // two morning co-hosts
-    // dedications: ["voiceA_night",   "voiceB_night"],     // two late-night co-hosts
+    // quietstorm uses elevenVoiceId above (QS 1, the smooth night host)
+    wakeup:    ["HNdzw1L9v4zMSqYR04AS", "Iv2X4a0P50k3zWSMuywe"],  // co-hosts: Morning woman + Morning Male
+    drivetime: "Iv2X4a0P50k3zWSMuywe",                            // afternoon/evening host (Morning Male)
+    // dedications: ["voiceA","voiceB"],  // add a pair later to make it a co-host show
   },
 
   // ---- Shows ----
