@@ -10,6 +10,10 @@ window.STATION = {
   // Background drive video (mp4) — the default / fallback:
   videoUrl: "https://v2avzszmc0kiogcf.public.blob.vercel-storage.com/YTDown_YouTube_4k-Downtown-Detroit-Michigan-Night-Drive_Media_Wgf4qAeWwkI_001_1080p.mp4",
 
+  // Seconds to skip at the start of the video (and loop point). The current night clip has a
+  // burned-in "Detroit Downtown at Night" intro title for ~10s — start past it. Use 0 for clean clips.
+  videoStart: 12,
+
   // Optional: different Detroit drive video per time of day (it crossfades on the daypart change).
   // Any not set here falls back to videoUrl above. Hours: morning 5–11, afternoon 11–17, evening 17–21, night 21–5.
   videos: {

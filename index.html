@@ -16,6 +16,7 @@
     --neon:#ff394f;
     --ink:#f6efe2;
     --muted:#cdbfa6;
+    --line:rgba(243,200,122,.18);
   }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -30,6 +31,9 @@
   .bg video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
     filter:brightness(.72) saturate(1.08) contrast(1.05);transform:scale(1.04);
     opacity:1;transition:opacity .6s ease}
+  /* never render the video's embedded subtitle track, no matter the load timing */
+  .bg video::cue{opacity:0;color:transparent;background:transparent}
+  .bg video::-webkit-media-text-track-container{display:none!important;visibility:hidden!important}
   /* light vignette only — keep the footage visible */
   .bg::after{content:"";position:absolute;inset:0;
     background:
@@ -85,17 +89,17 @@
   /* ===== Top corners ===== */
   .top{position:fixed;z-index:5;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;
     padding:24px clamp(18px,4vw,46px)}
-  .badge{display:inline-flex;align-items:center;gap:9px;font-size:11px;letter-spacing:.32em;text-transform:uppercase;
+  .badge{display:inline-flex;align-items:center;gap:9px;font-size:11px;letter-spacing:.32em;text-transform:uppercase;white-space:nowrap;
     color:#ffd2c2;border:1px solid rgba(255,57,79,.5);border-radius:3px;padding:8px 13px;background:rgba(20,10,8,.35);
     backdrop-filter:blur(6px);text-shadow:0 0 12px rgba(255,57,79,.6)}
   .badge .dot{width:8px;height:8px;border-radius:50%;background:var(--neon);box-shadow:0 0 10px 2px rgba(255,57,79,.9);animation:pulse 1.6s infinite}
   .badge.off{color:#b3a489;border-color:rgba(180,150,120,.32);text-shadow:none}
   .badge.off .dot{background:#6f6452;box-shadow:none;animation:none}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-  .clock{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px;letter-spacing:.24em;
+  .clock{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px;letter-spacing:.24em;white-space:nowrap;
     background:rgba(12,8,5,.3);backdrop-filter:blur(6px);padding:7px 12px;border-radius:3px}
   .top-right{display:flex;align-items:center;gap:12px}
-  .djbtn{display:inline-flex;align-items:center;gap:7px;cursor:pointer;
+  .djbtn{display:inline-flex;align-items:center;gap:7px;cursor:pointer;white-space:nowrap;
     font-size:11px;letter-spacing:.26em;text-transform:uppercase;font-family:var(--sans);
     color:var(--gold);border:1px solid rgba(243,200,122,.4);background:rgba(20,14,8,.32);
     backdrop-filter:blur(6px);padding:7px 11px;border-radius:3px;transition:opacity .2s,color .2s,border-color .2s}
@@ -147,6 +151,7 @@
   .nowline{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);min-height:14px;
     max-width:90vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.9}
   .nowline b{color:var(--gold);font-weight:500}
+  .nowline .livedot{color:var(--neon);text-shadow:0 0 8px rgba(255,57,79,.75);animation:pulse 1.6s infinite}
 
   /* subtle equalizer */
   .viz{position:fixed;left:0;right:0;bottom:0;z-index:3;width:100%;height:120px;display:block;opacity:.5;pointer-events:none}
@@ -166,9 +171,62 @@
     background:linear-gradient(90deg,var(--gold),var(--ember));color:#240d06;border:none;padding:15px 34px;border-radius:4px;
     cursor:pointer;box-shadow:0 14px 36px rgba(200,90,58,.4);transition:transform .12s}
   .go:hover{transform:translateY(-2px)}
+  .onnow{margin:0 0 22px;font-size:11px;letter-spacing:.34em;text-transform:uppercase;color:var(--amber)}
+  .onnow b{color:var(--cream);font-weight:600}
+  .tunein .ring{cursor:pointer}
+
+  /* ===== DJ caption (lower-third) ===== */
+  .caption{position:fixed;left:50%;bottom:150px;transform:translate(-50%,8px);z-index:6;pointer-events:none;
+    max-width:min(860px,90vw);text-align:center;
+    font-family:var(--display);font-weight:500;font-size:clamp(17px,2.3vw,25px);line-height:1.4;letter-spacing:-.01em;
+    color:var(--cream);background:rgba(8,5,3,.5);backdrop-filter:blur(10px);
+    border:1px solid var(--line);border-left:3px solid var(--neon);border-radius:10px;padding:12px 20px;
+    box-shadow:0 16px 44px rgba(0,0,0,.5);opacity:0;transition:opacity .4s ease, transform .4s ease}
+  .caption.show{opacity:1;transform:translate(-50%,0)}
+
+  /* ===== Show-transition card ===== */
+  .transition{position:fixed;left:50%;top:50%;transform:translate(-50%,-46%);z-index:7;pointer-events:none;text-align:center;
+    opacity:0;transition:opacity .7s ease, transform .7s ease}
+  .transition.show{opacity:1;transform:translate(-50%,-50%)}
+  .transition .lbl{font-size:12px;letter-spacing:.5em;text-transform:uppercase;color:var(--amber);margin-bottom:10px}
+  .transition .nm{font-family:var(--display);font-weight:700;letter-spacing:-.03em;font-size:clamp(34px,6vw,64px);color:var(--cream);
+    text-shadow:0 4px 40px rgba(0,0,0,.8)}
+
+  /* ===== Toasts (idle hint, volume) ===== */
+  .toast{position:fixed;left:50%;bottom:34px;transform:translate(-50%,10px);z-index:8;pointer-events:none;
+    font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--cream);
+    background:rgba(8,5,3,.6);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:999px;padding:9px 18px;
+    opacity:0;transition:opacity .4s ease, transform .4s ease}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  .voltoast{display:flex;align-items:center;gap:10px}
+  .voltoast .bar{width:120px;height:4px;border-radius:999px;background:rgba(255,235,200,.18);overflow:hidden}
+  .voltoast .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--ember));transition:width .15s}
 
   .hidden{display:none!important}
 
+  /* phones: keep the top bar from overflowing + give the wordmark room */
+  @media (max-width:600px){
+    .top{padding:14px 14px}
+    .top-right{gap:7px}
+    .showsbtn #showsLabel{display:none}
+    .showsbtn{max-width:none}
+    .djbtn{padding:8px 9px;letter-spacing:.14em}
+    .djbtn svg{width:15px;height:15px}
+    .badge{padding:8px 10px;letter-spacing:.18em;gap:7px}
+    .clock{font-size:11px;letter-spacing:.06em;padding:8px 9px}
+    .call{font-size:clamp(40px,13.5vw,74px)}
+    .freq{letter-spacing:.3em;font-size:11px}
+    .caption{bottom:118px;font-size:16px;padding:10px 15px}
+    .transition .nm{font-size:clamp(30px,9vw,48px)}
+  }
+  /* touch devices: comfortable 44px tap targets without changing the desktop look */
+  @media (pointer:coarse){
+    .djbtn{padding:12px 12px}
+    .badge{padding:12px 13px}
+    .clock{padding:12px 12px}
+    .shows-item{padding:14px 13px}
+    .go{padding:18px 36px}
+  }
   /* don't clip on short / landscape-phone screens */
   @media (max-height:430px){
     body{overflow-y:auto}
@@ -186,7 +244,7 @@
 </head>
 <body>
   <div class="bg" aria-hidden="true">
-    <video id="bgvid" autoplay muted loop playsinline preload="auto" tabindex="-1"></video>
+    <video id="bgvid" autoplay muted playsinline preload="auto" tabindex="-1" poster="assets/poster.jpg"></video>
   </div>
   <div class="haze" aria-hidden="true"></div>
   <div class="cabin" aria-hidden="true"></div>
@@ -200,6 +258,9 @@
   <div class="top">
     <div id="badge" class="badge off"><span class="dot"></span><span id="badgeText">Off Air</span></div>
     <div class="top-right">
+      <button id="muteBtn" class="djbtn" aria-label="Mute" title="Mute / unmute">
+        <svg id="muteIcon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 10v4h4l5 5V5L7 10H3zm13.5 2a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/></svg>
+      </button>
       <div class="shows-wrap">
         <button id="showsBtn" class="djbtn showsbtn" aria-haspopup="true" aria-expanded="false" title="Shows">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5h18v2H3V5zm0 6h12v2H3v-2zm0 6h18v2H3v-2zm14-6 5 3-5 3v-6z"/></svg>
@@ -217,12 +278,15 @@
   </div>
 
   <canvas class="viz" id="viz"></canvas>
+  <div class="caption" id="caption" aria-live="polite"></div>
+  <div class="transition" id="transition" aria-hidden="true"><div class="lbl">Now On</div><div class="nm" id="transitionName"></div></div>
+  <div class="toast" id="toast" aria-hidden="true"></div>
 
   <div class="stage">
     <div class="freq">98.7 FM · Detroit</div>
     <div class="call">WJLB <em>FM&nbsp;98</em></div>
     <div class="sub" id="subShow">Quiet Storm</div>
-    <div class="tag">90s &amp; 2000s Slow Jams · All Night Long</div>
+    <div class="tag" id="tagLine">90s &amp; 2000s Slow Jams · All Night Long</div>
 
     <div class="playWrap">
       <button class="play" id="playBtn" title="Play / Pause" aria-label="Play or pause" aria-pressed="false">
@@ -234,9 +298,10 @@
 
   <div class="scrim" id="scrim">
     <div class="tunein">
-      <div class="ring"><svg width="42" height="42" viewBox="0 0 24 24" fill="#f3c87a"><path d="M8 5v14l11-7z"/></svg></div>
+      <div class="ring" id="tuneRing" role="button" tabindex="0" aria-label="Tune in live"><svg width="42" height="42" viewBox="0 0 24 24" fill="#f3c87a"><path d="M8 5v14l11-7z"/></svg></div>
       <h2>You're tuning in…</h2>
-      <p>WJLB FM 98 — Quiet Storm. Slow jams all night, synced to the clock just like real radio. Leave it on while you cook, clean, or wind down.</p>
+      <div class="onnow">On now · <b id="onNow">The Quiet Storm</b></div>
+      <p>WJLB FM 98 — slow jams all night, synced to the clock just like real radio. Leave it on while you cook, clean, or wind down.</p>
       <button class="go" id="goBtn">Tune in live</button>
     </div>
   </div>
@@ -255,7 +320,9 @@
   const BASE_VOL = 0.9;
 
   const audio = new Audio();
-  audio.preload = "auto"; audio.crossOrigin = "anonymous"; audio.volume = BASE_VOL;
+  let userVol = (()=>{ const v=parseFloat(localStorage.getItem("qsr_vol")); return isFinite(v)?v:BASE_VOL; })();
+  let muted = false;
+  audio.preload = "auto"; audio.crossOrigin = "anonymous"; audio.volume = userVol;
 
   // ---- Curated tracks only (no user uploads). config.mixes overrides the single mix. ----
   const TRACKS = (Array.isArray(CFG.mixes) && CFG.mixes.length ? CFG.mixes : [{
@@ -316,7 +383,7 @@
   }
   function renderNow(){
     const t=TRACKS[current]; if(!t)return;
-    $("nowline").innerHTML = `● Live · <b>${esc(t.title)}</b>${t.artist?" — "+esc(t.artist):""}`;
+    $("nowline").innerHTML = `<span class="livedot">●</span> Live · <b>${esc(t.title)}</b>${t.artist?" — "+esc(t.artist):""}`;
     document.title = `▶ ${t.title} · WJLB FM 98`;
   }
   const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -367,7 +434,13 @@
   function resetIdle(){
     document.body.classList.remove("idle");
     clearTimeout(idleTimer);
-    if(tunedIn) idleTimer=setTimeout(()=>document.body.classList.add("idle"), IDLE_MS);
+    if(tunedIn) idleTimer=setTimeout(()=>{ document.body.classList.add("idle"); maybeIdleHint(); }, IDLE_MS);
+  }
+  function maybeIdleHint(){
+    if(localStorage.getItem("qsr_idlehint")) return;
+    localStorage.setItem("qsr_idlehint","1");
+    const t=$("toast"); t.className="toast show"; t.textContent="Move or tap to bring back the controls";
+    setTimeout(()=>t.classList.remove("show"), 3800);
   }
   ["mousemove","mousedown","touchstart","keydown","wheel"].forEach(ev=>window.addEventListener(ev, resetIdle, {passive:true}));
 
@@ -398,7 +471,12 @@
   }
   function setSpeaking(on){ speaking=on; $("djBtn").classList.toggle("speaking", on); }
   function startSpeak(){ setSpeaking(true); rampVolume(0.16, 600); }
-  function endSpeak(){ setSpeaking(false); rampVolume(BASE_VOL, 1000); }
+  function endSpeak(){ setSpeaking(false); rampVolume(userVol, 1000); hideCaption(); }
+
+  // ===== DJ caption (lower-third) =====
+  let capT=null;
+  function showCaption(text){ const c=$("caption"); c.textContent=text; c.classList.add("show"); clearTimeout(capT); }
+  function hideCaption(){ clearTimeout(capT); capT=setTimeout(()=>$("caption").classList.remove("show"), 400); }
 
   // Premium voice (ElevenLabs) plays through its own audio element; music ducks under it.
   // Supports multi-voice "exchanges" so co-host shows can trade lines. Falls back to the
@@ -424,6 +502,7 @@
   }
   function speakOne(text, voiceId){
     return new Promise(res=>{
+      showCaption(text);
       if(!PREMIUM){ speakOneBrowser(text).then(res); return; }
       djAudio.onended=()=>{ djAudio.onended=djAudio.onerror=null; res(); };
       djAudio.onerror=()=>{ djAudio.onended=djAudio.onerror=null; speakOneBrowser(text).then(res); }; // API down -> browser voice
@@ -467,7 +546,7 @@
 
   // ===== Shows (auto-dayparting + manual override) =====
   const SHOWS = {
-    quietstorm: { name:"The Quiet Storm", idents:[
+    quietstorm: { name:"The Quiet Storm", tag:"90s &amp; 2000s Slow Jams · All Night Long", idents:[
       "You're locked into the Quiet Storm. W-J-L-B, F-M ninety eight, Detroit.",
       "This is the after hours frequency, straight out the Motor City.",
       `Slow jams to keep you company ${timeOfNight()}. You're with the Quiet Storm.`,
@@ -490,7 +569,7 @@
       "Easy does it, Detroit. Slow jams till the sun comes up on W-J-L-B.",
       "Your after hours soundtrack. Ninety eight point seven, the Quiet Storm."
     ]},
-    drivetime: { name:"Drive Time", idents:[
+    drivetime: { name:"Drive Time", tag:"Easy Grooves · The Ride Home", idents:[
       "You're rolling through the afternoon with Drive Time on W-J-L-B, F-M ninety eight.",
       "Easy grooves for the ride. This is Drive Time on the Quiet Storm.",
       "However the day's treating you, we got the smooth soundtrack for it. Drive Time, Detroit.",
@@ -500,7 +579,7 @@
       "Ninety eight point seven — your afternoon and evening soul. This is Drive Time.",
       "No traffic can touch this vibe. Drive Time rolls on, Detroit."
     ]},
-    wakeup: { name:"The Wake-Up",
+    wakeup: { name:"The Wake-Up", tag:"Slow Jams · Easing Into The Day",
       idents:[
         "Good morning, Detroit. You're up with the Wake-Up on W-J-L-B, F-M ninety eight.",
         "Rise and shine, Motor City. Let's ease into it — slow and smooth.",
@@ -520,7 +599,7 @@
         ["You made it to another morning.","Let's ease into it together. F-M ninety eight, the Wake-Up."]
       ]
     },
-    dedications: { name:"Midnight Dedications", dedications:true,
+    dedications: { name:"Midnight Dedications", dedications:true, tag:"Shoutouts &amp; Slow Jams · After Midnight",
       idents:[
         "It's Midnight Dedications on W-J-L-B. This next one's for someone special.",
         "Late night, lights low — this is Midnight Dedications on the Quiet Storm.",
@@ -651,18 +730,26 @@
   function updateDJBtn(){ $("djBtn").classList.toggle("off", !djOn); $("djBtn").title = djOn?"DJ voice on":"DJ voice off"; }
   $("djBtn").addEventListener("click", ()=>{
     djOn=!djOn; localStorage.setItem("qsr_dj", djOn?"1":"0"); updateDJBtn();
-    if(!djOn){ try{ synth&&synth.cancel(); }catch(e){} clearTimeout(breakTimer); setSpeaking(false); rampVolume(BASE_VOL,400); }
+    if(!djOn){ try{ synth&&synth.cancel(); }catch(e){} try{ djAudio.pause(); }catch(e){} clearTimeout(breakTimer); setSpeaking(false); rampVolume(userVol,400); hideCaption(); }
     else { if(tunedIn) startDJ(); scheduleBreak(); }
   });
   updateDJBtn();
 
   // ===== Shows menu + dayparting =====
   function applyShow(){
-    const show = SHOWS[activeShowId()];
+    const id=activeShowId(), show = SHOWS[id];
     $("subShow").textContent = show.name;
-    $("showsLabel").textContent = showMode==="auto" ? show.name : show.name;
+    $("showsLabel").textContent = show.name;
+    if(show.tag) $("tagLine").innerHTML = show.tag;
+    $("onNow").textContent = show.name;
     [...$("showsMenu").children].forEach(el=>el.classList.toggle("on", el.dataset.id===showMode));
-    curShowId = activeShowId();
+    curShowId = id;
+  }
+  let transT=null;
+  function showTransition(name){
+    $("transitionName").textContent=name;
+    const el=$("transition"); el.classList.add("show");
+    clearTimeout(transT); transT=setTimeout(()=>el.classList.remove("show"), 4500);
   }
   (function buildShowsMenu(){
     const items=[["auto","Auto · by time of day"], ...SHOW_ORDER.map(id=>[id, SHOWS[id].name])];
@@ -672,7 +759,7 @@
       showMode=b.dataset.id; localStorage.setItem("qsr_show", showMode);
       $("showsMenu").classList.add("hidden"); $("showsBtn").setAttribute("aria-expanded","false");
       applyShow();
-      if(tunedIn && djOn) dj(`You're now with ${SHOWS[activeShowId()].name}. ${ident()}`);
+      if(tunedIn){ showTransition(SHOWS[activeShowId()].name); if(djOn) dj(`You're now with ${SHOWS[activeShowId()].name}. ${ident()}`); }
     }));
   })();
   $("showsBtn").addEventListener("click", e=>{
@@ -685,7 +772,11 @@
 
   // dayparting roll-over (show + background video) + Top of the Hour, checked periodically
   setInterval(()=>{
-    if(showMode==="auto" && activeShowId()!==curShowId) applyShow();
+    if(showMode==="auto" && activeShowId()!==curShowId){
+      const newName = SHOWS[activeShowId()].name;
+      applyShow();
+      if(tunedIn) showTransition(newName);
+    }
     applyVideo();   // swap the background drive when the daypart changes
     if(djOn && tunedIn && !audio.paused && !speaking){
       const d=new Date();
@@ -698,27 +789,62 @@
     if(!tunedIn){ $("scrim").classList.add("hide"); goLive(); startDJ(); return; }
     if(audio.paused){ if(ctx&&ctx.state==="suspended")ctx.resume(); audio.play(); } else audio.pause();
   });
-  $("goBtn").addEventListener("click", () => { $("scrim").classList.add("hide"); goLive(); startDJ(); });
-  document.addEventListener("keydown", e=>{ if(e.code==="Space"){ e.preventDefault(); $("playBtn").click(); } });
+  const tuneIn = () => { $("scrim").classList.add("hide"); goLive(); startDJ(); };
+  $("goBtn").addEventListener("click", tuneIn);
+  $("tuneRing").addEventListener("click", tuneIn);
+  $("tuneRing").addEventListener("keydown", e=>{ if(e.code==="Enter"||e.code==="Space"){ e.preventDefault(); e.stopPropagation(); tuneIn(); } });
+
+  // ===== Volume / mute (mute button + ↑/↓ keys; hidden in idle with the rest of the UI) =====
+  function applyVol(){
+    audio.muted = muted; djAudio.muted = muted;
+    if(!speaking) audio.volume = userVol;   // while ducked, the restore ramp targets userVol
+    $("muteBtn").classList.toggle("off", muted);
+    $("muteBtn").setAttribute("aria-label", muted?"Unmute":"Mute");
+  }
+  let volT=null;
+  function showVolToast(){
+    const t=$("toast"); t.className="toast voltoast show";
+    const pct=Math.round((muted?0:userVol)*100);
+    t.innerHTML=`<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M3 10v4h4l5 5V5L7 10H3z"/></svg><div class="bar"><i style="width:${pct}%"></i></div>`;
+    clearTimeout(volT); volT=setTimeout(()=>t.classList.remove("show"), 1400);
+  }
+  function setVol(v){ userVol=Math.max(0,Math.min(1,Math.round(v*100)/100)); localStorage.setItem("qsr_vol",userVol.toFixed(2)); if(userVol>0)muted=false; applyVol(); showVolToast(); }
+  $("muteBtn").addEventListener("click", ()=>{ muted=!muted; applyVol(); showVolToast(); });
+  applyVol();
+
+  document.addEventListener("keydown", e=>{
+    if(e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
+    if(e.code==="Space"){ e.preventDefault(); $("playBtn").click(); }
+    else if(e.code==="ArrowUp"){ e.preventDefault(); setVol(userVol+0.1); }
+    else if(e.code==="ArrowDown"){ e.preventDefault(); setVol(userVol-0.1); }
+    else if(e.code==="KeyM"){ muted=!muted; applyVol(); showVolToast(); }
+  });
 
   // ===== Background drive video — switches by time of day =====
   const bgv=$("bgvid");
   let curVideoUrl=null;
+  // Skip a burned-in intro title card and loop past it (the current night clip has one).
+  // Set per deploy in config.videoStart (seconds); clean clips can use 0.
+  const VIDEO_START = Math.max(0, CFG.videoStart || 0);
+  const seekStart = ()=>{ try{ if(VIDEO_START>0 && bgv.currentTime<VIDEO_START && (bgv.duration||1e9)>VIDEO_START) bgv.currentTime=VIDEO_START; }catch(e){} };
   function videoDaypart(h){ if(h>=5&&h<11) return "morning"; if(h>=11&&h<17) return "afternoon"; if(h>=17&&h<21) return "evening"; return "night"; }
   function videoUrlForNow(){ const m=CFG.videos||{}; return m[videoDaypart(hour())] || CFG.videoUrl || "assets/detroit-nights-web.mp4"; }
   function applyVideo(){
     if(!bgv) return;
     const url=videoUrlForNow(); if(url===curVideoUrl) return;
     const first = curVideoUrl===null; curVideoUrl=url;
-    const load=()=>{ bgv.src=url; for(const tt of bgv.textTracks) tt.mode="disabled"; bgv.play().catch(()=>{}); };
+    const load=()=>{ bgv.src=url; killCaps(); bgv.play().catch(()=>{}); };
     if(first){ load(); }                                   // no fade on first load
     else {                                                 // gentle crossfade on daypart change
       bgv.style.opacity="0";
       setTimeout(()=>{ load(); const on=()=>{ bgv.removeEventListener("loadeddata",on); bgv.style.opacity="1"; }; bgv.addEventListener("loadeddata",on); }, 600);
     }
   }
+  function killCaps(){ if(bgv) for(const tt of bgv.textTracks) tt.mode="disabled"; }
   if(bgv){
-    bgv.textTracks.addEventListener?.("addtrack", ()=>{ for(const tt of bgv.textTracks) tt.mode="disabled"; });
+    bgv.textTracks.addEventListener?.("addtrack", killCaps);
+    ["loadedmetadata","loadeddata","canplay"].forEach(ev=>bgv.addEventListener(ev, ()=>{ killCaps(); seekStart(); }));
+    bgv.addEventListener("ended", ()=>{ bgv.currentTime=VIDEO_START; bgv.play().catch(()=>{}); });  // custom loop skips the intro
     applyVideo();
     document.addEventListener("click", ()=>bgv.play().catch(()=>{}), {once:true});
   }
