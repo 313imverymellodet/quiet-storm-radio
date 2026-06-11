@@ -322,7 +322,10 @@
   const audio = new Audio();
   let userVol = (()=>{ const v=parseFloat(localStorage.getItem("qsr_vol")); return isFinite(v)?v:BASE_VOL; })();
   let muted = false;
-  audio.preload = "auto"; audio.crossOrigin = "anonymous"; audio.volume = userVol;
+  // No crossOrigin: the mix loads like a plain media file (same as the video), which is far more
+  // reliable across hosts/CDNs than crossOrigin+range (esp. on R2's rate-limited r2.dev subdomain).
+  // Trade-off: the visualizer runs in its synthetic mode instead of reading live frequencies.
+  audio.preload = "auto"; audio.volume = userVol;
 
   // ---- Curated tracks only (no user uploads). config.mixes overrides the single mix. ----
   const TRACKS = (Array.isArray(CFG.mixes) && CFG.mixes.length ? CFG.mixes : [{
@@ -360,17 +363,29 @@
   }
   function next(){ const {index,offset}=livePosition(); playTrack(index,offset); }
 
-  // fix #2: recover from stream errors / stalls instead of going silent forever
-  let retryT=null;
+  // fix #2: recover from a real stream error instead of going silent forever.
+  // Gentle + self-limiting: a single guarded resume (no audio.load() — that aborts and
+  // restarts the whole download, which can loop). Only escalates to a full reload after
+  // repeated failures, with backoff. Never fires on 'stalled'/'waiting' (normal buffering).
+  let retryT=null, recovering=false, recoverFails=0;
   function recover(){
-    if(!tunedIn) return;
+    if(!tunedIn || recovering) return;
+    recovering=true;
     clearTimeout(retryT);
-    retryT=setTimeout(()=>{ const {index,offset}=livePosition(); try{ audio.load(); }catch(e){}
-      try{ if(offset>0) audio.currentTime=offset; }catch(e){} audio.play().catch(()=>{}); }, 4000);
+    const wait = Math.min(30000, 5000 * (recoverFails+1));
+    retryT=setTimeout(()=>{
+      recovering=false;
+      if(!audio.paused) { recoverFails=0; return; }     // already recovered on its own
+      recoverFails++;
+      const {index,offset}=livePosition();
+      if(recoverFails>=3){ recoverFails=0; playTrack(index, offset); return; }  // last resort: full reload
+      try{ if(offset>0 && Math.abs(audio.currentTime-offset)>2) audio.currentTime=offset; }catch(e){}
+      audio.play().catch(()=>{});
+    }, wait);
   }
   audio.addEventListener("ended", next);
   audio.addEventListener("error", recover);
-  audio.addEventListener("stalled", recover);
+  audio.addEventListener("playing", ()=>{ recoverFails=0; });
   audio.addEventListener("play", ()=>setPlaying(true));
   audio.addEventListener("pause", ()=>setPlaying(false));
 
@@ -389,7 +404,7 @@
   const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
   // ===== Visualizer — fix #1: never let WebAudio gate the audio on iOS =====
-  let ctx, analyser, dataArr, rafId=null, useWA=!isIOS;
+  let ctx, analyser, dataArr, rafId=null, useWA=false;  // synthetic visualizer (no WebAudio routing → no CORS dependency)
   const canvas=$("viz"), cctx=canvas.getContext("2d");
   function fitCanvas(){ canvas.width=Math.max(1,window.innerWidth*devicePixelRatio); canvas.height=120*devicePixelRatio; }
   window.addEventListener("resize", fitCanvas);
@@ -825,14 +840,16 @@
   let curVideoUrl=null;
   // Skip a burned-in intro title card and loop past it (the current night clip has one).
   // Set per deploy in config.videoStart (seconds); clean clips can use 0.
-  const VIDEO_START = Math.max(0, CFG.videoStart || 0);
-  const seekStart = ()=>{ try{ if(VIDEO_START>0 && bgv.currentTime<VIDEO_START && (bgv.duration||1e9)>VIDEO_START) bgv.currentTime=VIDEO_START; }catch(e){} };
   function videoDaypart(h){ if(h>=5&&h<11) return "morning"; if(h>=11&&h<17) return "afternoon"; if(h>=17&&h<21) return "evening"; return "night"; }
+  function curVideoStart(){ const vs=CFG.videoStart; const n=(vs && typeof vs==="object")?vs[videoDaypart(hour())]:vs; return Math.max(0, n||0); }
+  const seekStart = ()=>{ const S=curVideoStart(); try{ if(S>0 && bgv.currentTime<S && (bgv.duration||1e9)>S) bgv.currentTime=S; }catch(e){} };
+  function posterForNow(){ const dp=videoDaypart(hour()); return (dp==="morning"||dp==="afternoon") ? "assets/poster-day.jpg" : "assets/poster.jpg"; }
   function videoUrlForNow(){ const m=CFG.videos||{}; return m[videoDaypart(hour())] || CFG.videoUrl || "assets/detroit-nights-web.mp4"; }
   function applyVideo(){
     if(!bgv) return;
     const url=videoUrlForNow(); if(url===curVideoUrl) return;
     const first = curVideoUrl===null; curVideoUrl=url;
+    bgv.poster = posterForNow();
     const load=()=>{ bgv.src=url; killCaps(); bgv.play().catch(()=>{}); };
     if(first){ load(); }                                   // no fade on first load
     else {                                                 // gentle crossfade on daypart change
@@ -844,7 +861,7 @@
   if(bgv){
     bgv.textTracks.addEventListener?.("addtrack", killCaps);
     ["loadedmetadata","loadeddata","canplay"].forEach(ev=>bgv.addEventListener(ev, ()=>{ killCaps(); seekStart(); }));
-    bgv.addEventListener("ended", ()=>{ bgv.currentTime=VIDEO_START; bgv.play().catch(()=>{}); });  // custom loop skips the intro
+    bgv.addEventListener("ended", ()=>{ bgv.currentTime=curVideoStart(); bgv.play().catch(()=>{}); });  // custom loop skips the intro
     applyVideo();
     document.addEventListener("click", ()=>bgv.play().catch(()=>{}), {once:true});
   }

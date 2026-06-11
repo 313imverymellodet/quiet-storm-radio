@@ -7,25 +7,27 @@
  *  Upload to: Vercel dashboard → Storage → Blob  (or Cloudinary).
  */
 window.STATION = {
-  // Background drive video (mp4) — the default / fallback:
-  videoUrl: "https://v2avzszmc0kiogcf.public.blob.vercel-storage.com/YTDown_YouTube_4k-Downtown-Detroit-Michigan-Night-Drive_Media_Wgf4qAeWwkI_001_1080p.mp4",
+  // Media hosted on Cloudflare R2 (public bucket pub-a12f3f24cb3d459d955cdac3d6006546.r2.dev).
 
-  // Seconds to skip at the start of the video (and loop point). The current night clip has a
-  // burned-in "Detroit Downtown at Night" intro title for ~10s — start past it. Use 0 for clean clips.
-  videoStart: 12,
+  // Background drive video (mp4) — the default / fallback (night drive):
+  videoUrl: "https://pub-a12f3f24cb3d459d955cdac3d6006546.r2.dev/detroit-nights-web.mp4",
 
-  // Optional: different Detroit drive video per time of day (it crossfades on the daypart change).
-  // Any not set here falls back to videoUrl above. Hours: morning 5–11, afternoon 11–17, evening 17–21, night 21–5.
+  // Seconds to skip at the start of each clip (and loop point) — skips burned-in intro title cards.
+  // Number = same for all; or per-daypart map. Belle Isle's labels clear by ~30s; night clip ~10s.
+  videoStart: { morning: 35, afternoon: 35, evening: 12, night: 12 },
+
+  // Per-time-of-day background (crossfades on the daypart change).
+  // Hours: morning 5–11, afternoon 11–17, evening 17–21, night 21–5.
   videos: {
-    // morning:   "https://…/detroit-morning.mp4",
-    // afternoon: "https://…/detroit-afternoon.mp4",
-    // evening:   "https://…/detroit-evening.mp4",
-    // night:     "https://…/detroit-night.mp4",
+    morning:   "https://pub-a12f3f24cb3d459d955cdac3d6006546.r2.dev/belle-isle-day.mp4",
+    afternoon: "https://pub-a12f3f24cb3d459d955cdac3d6006546.r2.dev/belle-isle-day.mp4",
+    evening:   "https://pub-a12f3f24cb3d459d955cdac3d6006546.r2.dev/detroit-nights-web.mp4",
+    night:     "https://pub-a12f3f24cb3d459d955cdac3d6006546.r2.dev/detroit-nights-web.mp4",
   },
 
   // ---- Curated mixes (the only music that plays — users can't add their own) ----
   // Single mix shortcut:
-  mixUrl:   "https://v2avzszmc0kiogcf.public.blob.vercel-storage.com/Quiet%20Storm%20Slow%20Jams%20Vol%201.%20%5BJoe%2C%20Silk%2C%20Usher%2C%20Maxwell%2C%20Xscape%5D.mp3",
+  mixUrl:   "https://pub-a12f3f24cb3d459d955cdac3d6006546.r2.dev/quiet-storm-vol1.mp3",
   mixTitle:  "Quiet Storm Slow Jams, Vol. 1",
   mixArtist: "Joe · Silk · Usher · Maxwell · Xscape",
 
