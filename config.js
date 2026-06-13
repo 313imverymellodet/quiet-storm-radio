@@ -25,18 +25,21 @@ window.STATION = {
     night:     "https://pub-a12f3f24cb3d459d955cdac3d6006546.r2.dev/detroit-nights-web.mp4",
   },
 
-  // ---- Curated mixes (the only music that plays — users can't add their own) ----
-  // Single mix shortcut:
+  // ---- Curated playlist (the only music that plays — users can't add their own).
+  // Mixes play back-to-back, clock-synced, looping the whole set. `duration` (seconds)
+  // is optional but keeps the live-sync exact without re-reading each file.
+  mixes: [
+    { url:"https://pub-a12f3f24cb3d459d955cdac3d6006546.r2.dev/quiet-storm-vol1.mp3",
+      title:"Quiet Storm Slow Jams, Vol. 1", artist:"Joe · Silk · Usher · Maxwell · Xscape", duration:3809 },
+    { url:"https://pub-a12f3f24cb3d459d955cdac3d6006546.r2.dev/quiet-storm-vol5.mp3",
+      title:"Quiet Storm Slow Jams, Vol. 5", artist:"Faith Evans · Dru Hill · Aaliyah · 702", duration:3672 },
+    { url:"https://pub-a12f3f24cb3d459d955cdac3d6006546.r2.dev/valentine-vibes.mp3",
+      title:"Slow Jam Mix — Valentine Vibes", artist:"90s & 2000s R&B Quiet Storm", duration:4705 },
+  ],
+  // (single-mix fallback if `mixes` is empty)
   mixUrl:   "https://pub-a12f3f24cb3d459d955cdac3d6006546.r2.dev/quiet-storm-vol1.mp3",
   mixTitle:  "Quiet Storm Slow Jams, Vol. 1",
   mixArtist: "Joe · Silk · Usher · Maxwell · Xscape",
-
-  // …or a curated playlist (overrides mixUrl when non-empty). They play back
-  // to back, clock-synced, looping the whole set:
-  // mixes: [
-  //   { url:"https://…/vol1.mp3", title:"Quiet Storm, Vol. 1", artist:"Joe · Silk · Usher" },
-  //   { url:"https://…/vol2.mp3", title:"Quiet Storm, Vol. 2", artist:"Sade · Maxwell · Kem" },
-  // ],
 
   // ---- Quiet Storm DJ (spoken breaks) ----
   dj: true,             // master on/off (users can also toggle in the UI)
