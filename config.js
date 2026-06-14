@@ -29,6 +29,7 @@ window.STATION = {
     ],
     evening: [
       "https://pub-a12f3f24cb3d459d955cdac3d6006546.r2.dev/detroit-nights-web.mp4",
+      "https://pub-a12f3f24cb3d459d955cdac3d6006546.r2.dev/detroit-dusk-drive.mp4",
     ],
     night: [
       "https://pub-a12f3f24cb3d459d955cdac3d6006546.r2.dev/detroit-nights-web.mp4",
