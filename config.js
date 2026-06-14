@@ -16,13 +16,23 @@ window.STATION = {
   // Number = same for all; or per-daypart map. Belle Isle's labels clear by ~30s; night clip ~10s.
   videoStart: { morning: 35, afternoon: 35, evening: 12, night: 12 },
 
-  // Per-time-of-day background (crossfades on the daypart change).
-  // Hours: morning 5–11, afternoon 11–17, evening 17–21, night 21–5.
+  // Per-time-of-day background. Each daypart is a LIST — a random clip is picked on each
+  // visit (and a fresh one each time a clip loops), so it feels new every time.
+  // Add more by dropping extra R2 URLs into the arrays. Hours: morning 5–11, afternoon 11–17,
+  // evening 17–21, night 21–5.
   videos: {
-    morning:   "https://pub-a12f3f24cb3d459d955cdac3d6006546.r2.dev/belle-isle-day.mp4",
-    afternoon: "https://pub-a12f3f24cb3d459d955cdac3d6006546.r2.dev/belle-isle-day.mp4",
-    evening:   "https://pub-a12f3f24cb3d459d955cdac3d6006546.r2.dev/detroit-nights-web.mp4",
-    night:     "https://pub-a12f3f24cb3d459d955cdac3d6006546.r2.dev/detroit-nights-web.mp4",
+    morning: [
+      "https://pub-a12f3f24cb3d459d955cdac3d6006546.r2.dev/belle-isle-day.mp4",
+    ],
+    afternoon: [
+      "https://pub-a12f3f24cb3d459d955cdac3d6006546.r2.dev/belle-isle-day.mp4",
+    ],
+    evening: [
+      "https://pub-a12f3f24cb3d459d955cdac3d6006546.r2.dev/detroit-nights-web.mp4",
+    ],
+    night: [
+      "https://pub-a12f3f24cb3d459d955cdac3d6006546.r2.dev/detroit-nights-web.mp4",
+    ],
   },
 
   // ---- Curated playlist (the only music that plays — users can't add their own).

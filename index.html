@@ -835,33 +835,40 @@
     else if(e.code==="KeyM"){ muted=!muted; applyVol(); showVolToast(); }
   });
 
-  // ===== Background drive video — switches by time of day =====
+  // ===== Background drive video — a RANDOM clip per time of day (fresh each visit) =====
   const bgv=$("bgvid");
-  let curVideoUrl=null;
-  // Skip a burned-in intro title card and loop past it (the current night clip has one).
-  // Set per deploy in config.videoStart (seconds); clean clips can use 0.
+  let curVideoUrl=null, curDaypart=null, firstVideo=true;
   function videoDaypart(h){ if(h>=5&&h<11) return "morning"; if(h>=11&&h<17) return "afternoon"; if(h>=17&&h<21) return "evening"; return "night"; }
+  // Skip a burned-in intro title card and loop past it. Per-daypart map in config.videoStart (seconds).
   function curVideoStart(){ const vs=CFG.videoStart; const n=(vs && typeof vs==="object")?vs[videoDaypart(hour())]:vs; return Math.max(0, n||0); }
   const seekStart = ()=>{ const S=curVideoStart(); try{ if(S>0 && bgv.currentTime<S && (bgv.duration||1e9)>S) bgv.currentTime=S; }catch(e){} };
   function posterForNow(){ const dp=videoDaypart(hour()); return (dp==="morning"||dp==="afternoon") ? "assets/poster-day.jpg" : "assets/poster.jpg"; }
-  function videoUrlForNow(){ const m=CFG.videos||{}; return m[videoDaypart(hour())] || CFG.videoUrl || "assets/detroit-nights-web.mp4"; }
-  function applyVideo(){
-    if(!bgv) return;
-    const url=videoUrlForNow(); if(url===curVideoUrl) return;
-    const first = curVideoUrl===null; curVideoUrl=url;
-    bgv.poster = posterForNow();
+  // each daypart's video can be a single URL or an ARRAY of URLs (played at random)
+  function dayClips(){ const m=CFG.videos||{}; let v=m[videoDaypart(hour())]; if(v==null) v=CFG.videoUrl||"assets/detroit-nights-web.mp4"; return (Array.isArray(v)?v.filter(Boolean):[v]); }
+  function pickClip(){ const l=dayClips(); if(l.length<=1) return l[0]||CFG.videoUrl; let u; do{ u=l[Math.floor(Math.random()*l.length)]; }while(u===curVideoUrl); return u; }  // don't repeat back-to-back
+  function loadVideo(url, fade){
+    if(!url) return;
+    curVideoUrl=url; bgv.poster=posterForNow();
     const load=()=>{ bgv.src=url; killCaps(); bgv.play().catch(()=>{}); };
-    if(first){ load(); }                                   // no fade on first load
-    else {                                                 // gentle crossfade on daypart change
-      bgv.style.opacity="0";
-      setTimeout(()=>{ load(); const on=()=>{ bgv.removeEventListener("loadeddata",on); bgv.style.opacity="1"; }; bgv.addEventListener("loadeddata",on); }, 600);
-    }
+    if(!fade){ load(); }
+    else { bgv.style.opacity="0"; setTimeout(()=>{ load(); const on=()=>{ bgv.removeEventListener("loadeddata",on); bgv.style.opacity="1"; }; bgv.addEventListener("loadeddata",on); }, 600); }
+  }
+  function applyVideo(opts){
+    if(!bgv) return;
+    const force=!!(opts&&opts.force), dp=videoDaypart(hour());
+    if(dp===curDaypart && !force) return;          // only re-pick on a daypart change (not every 15s tick)
+    curDaypart=dp;
+    loadVideo(pickClip(), !firstVideo);
+    firstVideo=false;
   }
   function killCaps(){ if(bgv) for(const tt of bgv.textTracks) tt.mode="disabled"; }
   if(bgv){
     bgv.textTracks.addEventListener?.("addtrack", killCaps);
     ["loadedmetadata","loadeddata","canplay"].forEach(ev=>bgv.addEventListener(ev, ()=>{ killCaps(); seekStart(); }));
-    bgv.addEventListener("ended", ()=>{ bgv.currentTime=curVideoStart(); bgv.play().catch(()=>{}); });  // custom loop skips the intro
+    bgv.addEventListener("ended", ()=>{
+      if(dayClips().length>1) loadVideo(pickClip(), true);                 // roll a fresh random clip
+      else { bgv.currentTime=curVideoStart(); bgv.play().catch(()=>{}); }  // single clip: loop past the intro
+    });
     applyVideo();
     document.addEventListener("click", ()=>bgv.play().catch(()=>{}), {once:true});
   }
